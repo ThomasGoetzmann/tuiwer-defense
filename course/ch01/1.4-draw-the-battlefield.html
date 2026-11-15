@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Draw the Battlefield</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="1.4" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 1: First steps</div>
+  <h1>1.4 Draw the battlefield</h1>
+  <div class="meta"><span>≈ 30 min</span><span>Domain + TUI crates</span><span>Chapter finale</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Build text with <code>String</code>, <code>push</code>, <code>push_str</code> and <code>format!</code>.</li>
+      <li>Know the difference between <code>String</code> and <code>&amp;str</code> (enough for now).</li>
+      <li>Design the first level, and print the battlefield in your terminal.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>C#</th><th>Rust</th><th>Note</th></tr>
+      <tr><td><code>new StringBuilder()</code></td><td><code>String::new()</code></td><td>A <code>String</code> is owned and growable.</td></tr>
+      <tr><td><code>sb.Append('#')</code></td><td><code>s.push('#')</code></td><td>One <code>char</code>.</td></tr>
+      <tr><td><code>sb.Append("text")</code></td><td><code>s.push_str("text")</code></td><td>A <code>&amp;str</code>.</td></tr>
+      <tr><td><code>$"Gold: {gold,4}"</code></td><td><code>format!("Gold: {gold:&gt;4}")</code></td><td>Same idea. Checked at compile time.</td></tr>
+      <tr><td><code>Console.Write</code> / <code>WriteLine</code></td><td><code>print!</code> / <code>println!</code></td><td></td></tr>
+      <tr><td><code>string</code> parameter</td><td><code>&amp;str</code> parameter</td><td>Borrowed text: works for literals and for <code>String</code>.</td></tr>
+      <tr><td><code>"a\nb"</code>, <code>@"…"</code></td><td><code>"a\nb"</code>, <code>r"…"</code>, <code>r#"…"#</code></td><td>Raw strings.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>Two string types</h2>
+    <figure>
+      <svg viewBox="0 0 720 190" role="img" aria-label="A String owns a heap buffer with pointer, length and capacity. A &str is a pointer and a length that borrows text owned by someone else.">
+        <style>
+          .h { fill: var(--text); font: 700 14px system-ui, sans-serif; }
+          .m { fill: var(--text); font: 12px ui-monospace, monospace; }
+          .s { fill: var(--muted); font: 12px system-ui, sans-serif; }
+          .own { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+          .brw { fill: var(--info-soft); stroke: var(--info); stroke-width: 1.5; }
+          .heap { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; }
+          .pa { stroke: var(--accent); stroke-width: 1.5; fill: none; marker-end: url(#a1); }
+          .pb { stroke: var(--info); stroke-width: 1.5; fill: none; marker-end: url(#a2); stroke-dasharray: 5 4; }
+        </style>
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--info)"/></marker>
+        </defs>
+        <text class="h" x="20" y="24">String (owns)</text>
+        <rect class="own" x="20" y="36" width="210" height="40" rx="4"/>
+        <text class="m" x="32" y="61">ptr | len=7 | cap=16</text>
+        <text class="h" x="20" y="130">&amp;str (borrows)</text>
+        <rect class="brw" x="20" y="142" width="210" height="40" rx="4"/>
+        <text class="m" x="32" y="167">ptr | len=3</text>
+        <text class="s" x="330" y="24">heap buffer, freed when the String is dropped</text>
+        <rect class="heap" x="330" y="40" width="370" height="36" rx="4"/>
+        <text class="m" x="344" y="63">S  #  #  #  #  #  E  · · · (free capacity)</text>
+        <path class="pa" d="M230 56 H328"/>
+        <path class="pb" d="M230 162 C 300 162, 330 120, 388 80"/>
+        <text class="s" x="330" y="120">a view into the same bytes (here: "###")</text>
+      </svg>
+      <figcaption><code>String</code> is like a <code>StringBuilder</code> you own. <code>&amp;str</code> is like a <code>ReadOnlySpan&lt;char&gt;</code>.</figcaption>
+    </figure>
+    <p>The rule for now: <strong>return</strong> a <code>String</code> when you build new text. <strong>Accept</strong> a <code>&amp;str</code> when you only read text.
+      Chapter 3 explains why this works.</p>
+<pre data-label="rust"><code class="language-rust">let mut row = String::with_capacity(8);   // like new StringBuilder(8)
+row.push('S');
+row.push_str("###");
+row.push('\n');
+let header = format!("Wave {wave:&gt;2}/{MAX_WAVES} · Gold {gold:&gt;4}");</code></pre>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 1.4-A: render the map</span>
+    <p>Add <code>render_ascii(&amp;self) -&gt; String</code> to <code>Map</code>. One character per tile, and <code>\n</code> after each row:</p>
+    <ul>
+      <li><code>S</code>: the first tile of the path (the spawn)</li>
+      <li><code>E</code>: the last tile of the path (the exit)</li>
+      <li><code>#</code>: any other path tile</li>
+      <li><code>.</code>: an empty tile</li>
+    </ul>
+<pre data-label="tests to add"><code class="language-rust">#[test]
+fn renders_a_straight_path() {
+    let path = (0..5).map(|x| Position::new(x, 1)).collect();
+    let map = Map::new(5, 3, path);
+    assert_eq!(map.render_ascii(), ".....\nS###E\n.....\n");
+}
+
+#[test]
+fn renders_a_bent_path() {
+    let path = vec![
+        Position::new(0, 0),
+        Position::new(0, 1),
+        Position::new(0, 2),
+        Position::new(1, 2),
+        Position::new(2, 2),
+    ];
+    let map = Map::new(3, 3, path);
+    assert_eq!(map.render_ascii(), "S..\n#..\n##E\n");
+}</code></pre>
+    <p>The first test uses an iterator and a closure (<code>|x| …</code>) to build the path. You will write them yourself in chapter 5. For now, read it as “for x in 0..5, make a position”.</p>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>Two nested <code>for</code> loops: rows (<code>y</code>) outside, columns (<code>x</code>) inside. Decide one character per tile.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>A <code>Vec</code> has <code>first()</code> and <code>last()</code>. They do not return a <code>Position</code>, because the list can be empty.
+        They return an <code>Option</code> of a reference (chapter 4). You can still compare: <code>self.path.first() == Some(&amp;pos)</code>.
+        An <code>if … else if … else</code> chain is an expression that gives a <code>char</code>.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>let tile = if self.path.first() == Some(&amp;pos) { 'S' } else if … { 'E' } else if self.is_on_path(pos) { '#' } else { '.' };</code>
+        then <code>out.push(tile);</code>. After the inner loop: <code>out.push('\n');</code>. The capacity is <code>(width + 1) * height</code>.</p></details>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 1.4-B: design the first level</span>
+    <p>Write a public function <code>first_level() -&gt; Map</code>. <strong>You</strong> design the path. The rules: the map is 30 × 10, the path starts on the left edge,
+      ends on the right edge, and has no gaps. Make it interesting: at least three turns.</p>
+    <p>The test needs a read-only view of the path. Add this method to <code>Map</code>. It returns a <a href="../glossary.html#slice">slice</a>, a borrowed view of the <code>Vec</code>:</p>
+<pre data-label="add to impl Map"><code class="language-rust">pub fn path(&amp;self) -&gt; &amp;[Position] {
+    &amp;self.path
+}</code></pre>
+<pre data-label="test to add"><code class="language-rust">#[test]
+fn first_level_has_a_valid_path() {
+    let map = first_level();
+    let path = map.path();
+    assert_eq!((map.width(), map.height()), (30, 10));
+    assert_eq!(path[0].x, 0, "the path must start on the left edge");
+    assert_eq!(path[path.len() - 1].x, map.width() - 1, "the path must end on the right edge");
+    for &amp;pos in path {
+        assert!(map.contains(pos), "{pos:?} is outside the map");
+    }
+    for pair in path.windows(2) {
+        assert_eq!(pair[0].manhattan_distance(pair[1]), 1, "gap between {:?} and {:?}", pair[0], pair[1]);
+    }
+}</code></pre>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>A path is a list of straight segments. Build it with one <code>let mut path = Vec::new();</code> and one loop per segment.
+        Be careful not to push the corner tile twice.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>A range counts up only. To go left or up, reverse it: <code>(2..15).rev()</code>. Each loop calls <code>path.push(Position::new(x, y))</code>.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>for x in 0..=10 { path.push(Position::new(x, 1)); }</code> then <code>for y in 2..=7 { path.push(Position::new(10, y)); }</code> and so on.
+        Each segment starts one tile after the previous corner.</p></details>
+  </section>
+
+  <section class="block showoff">
+    <span class="block-tag">Show-off: the battlefield</span>
+    <p>In <code>tuiwer-tui/src/main.rs</code>, print a header and the map. Use all your rules from this chapter:</p>
+<pre data-label="expected output (your path will differ)"><code class="language-plaintext">TUIWER DEFENSE        Gold  100   Lives  20
+Wave  1/10 · 5 enemies · 30 s to build
+..............................
+S##########...................
+..........#...................
+..........#.......#########...
+..........#.......#.......#...
+..........#.......#.......#...
+..........#########.......###E
+..............................
+..............................
+..............................</code></pre>
+<pre data-label="fish"><code class="language-bash">cargo run</code></pre>
+    <p>Bonus: in lesson 0.2 you used <code>owo-colors</code>. Add it to the TUI crate. Print <code>#</code> in yellow, <code>S</code> in green and <code>E</code> in red.
+      Loop over <code>rendered.chars()</code> and choose a colour per <code>char</code>. The domain stays colour-free: colour is presentation.</p>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo fmt --all --check; and cargo clippy --workspace --all-targets -- -D warnings; and cargo test --workspace; and cargo run</code></pre>
+    <p>All green, and the battlefield is on your screen. Commit and push. The CI must also be green.</p>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>Change the return type of <code>render_ascii</code> to <code>&amp;str</code>, and return <code>&amp;out</code>. Read <code>E0515</code> <em>cannot return reference to local variable</em>.
+      The compiler tells you: you cannot return a view into a <code>String</code> that is dropped at the end of the function.
+      In C#, the GC keeps it alive. In Rust, nobody would own it. This is why you return a <code>String</code>. Put it back.</p>
+  </section>
+
+  <section class="block boss">
+    <span class="block-tag">Boss fight</span>
+    <p>Writing a path tile by tile is boring. Write <code>Map::from_waypoints(width: u16, height: u16, waypoints: &amp;[Position]) -&gt; Map</code>.
+      It takes only the corners, for example <code>[(0,1), (10,1), (10,7), (18,7)]</code>, and fills the straight lines between them.
+      Rewrite <code>first_level</code> with it. Your 1.4-B test must still pass, and it now protects the refactor. What should happen when two waypoints are not on one line? Write a test for your decision.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Rust strings are always valid UTF-8. You cannot index them with <code>s[3]</code>, because a <code>char</code> can use 1 to 4 bytes,
+      so “the 4th character” is not a cheap operation. C# hides this with UTF-16, and emoji break it (surrogate pairs).
+      Rust makes the cost visible: <code>s.chars().nth(3)</code> clearly walks the text.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>Later, you will implement the <code>Display</code> trait for <code>Map</code> (chapter 6). Then <code>println!("{map}")</code> works directly,
+      like overriding <code>ToString()</code>. It is also more efficient: <code>Display</code> writes to the output directly, without building a <code>String</code> first.</p>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--ok-soft);color:var(--ok)">Chapter 1 complete</span>
+    <h2>What you can do now</h2>
+    <ul>
+      <li>Use immutable bindings, <code>mut</code> and shadowing.</li>
+      <li>Choose integer types, and handle overflow on purpose.</li>
+      <li>Write functions as expressions.</li>
+      <li>Model data with structs, <code>impl</code> blocks and derives.</li>
+      <li>Build text with <code>String</code>.</li>
+    </ul>
+    <p>You also met some ideas that come back later: <code>&amp;</code>, <code>Option</code>, slices, closures, and “use of moved value”.
+      They are the core of Rust, and the next chapters are about them.</p>
+    <p><strong>Next step:</strong> ask Claude to review chapter 1, then: <em>“generate chapter 2”</em>.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">Review all my chapter 1 commits. Give me the three most important improvements, ranked. For each, explain the Rust idiom and point to the docs. Do not rewrite my code.</div>
+  </section>
+</main>
+</body>
+</html>

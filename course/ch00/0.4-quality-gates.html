@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quality Gates and CI</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="0.4" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 0: Setup and toolchain</div>
+  <h1>0.4 Quality gates and CI</h1>
+  <div class="meta"><span>≈ 25 min</span><span>Tools + GitHub</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Use <code>rustfmt</code> and <code>clippy</code> like a Rust developer.</li>
+      <li>Get instant feedback while you type, with <code>bacon</code>.</li>
+      <li>Push the repository to GitHub with a CI that checks format, lints and tests.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>.NET</th><th>Rust</th><th>Note</th></tr>
+      <tr><td><code>dotnet format</code> + <code>.editorconfig</code></td><td><code>cargo fmt</code></td><td>No config. One style for the whole community.</td></tr>
+      <tr><td>Roslyn analyzers, ReSharper</td><td><code>cargo clippy</code></td><td>Clippy teaches idioms. Read every warning.</td></tr>
+      <tr><td><code>TreatWarningsAsErrors</code></td><td><code>-D warnings</code></td><td>Use it in CI only.</td></tr>
+      <tr><td><code>dotnet watch test</code></td><td><code>bacon</code></td><td>A small terminal app.</td></tr>
+      <tr><td><code>dotnet test</code> runner</td><td><code>cargo nextest run</code></td><td>Faster, clearer output. Optional.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>The feedback loop</h2>
+    <pre class="mermaid">
+flowchart LR
+    E["edit"] --> RA["rust-analyzer<br/>(in the editor, instant)"]
+    RA --> B["bacon<br/>(on save, seconds)"]
+    B --> C["git push"]
+    C --> CI["GitHub Actions<br/>fmt · clippy · test"]
+    </pre>
+    <p>Each step catches problems the step before can miss. The CI is the gate: nothing reaches <code>main</code> red.</p>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Format and lint</h2>
+    <ol class="steps">
+      <li>
+        <p>Break the format on purpose. In <code>main.rs</code>, put all code on one line with odd spaces. Then:</p>
+<pre data-label="fish"><code class="language-bash">cargo fmt --check
+cargo fmt
+git diff</code></pre>
+        <p><code>--check</code> only reports. Without it, <code>cargo fmt</code> fixes the files.
+          Your editor also formats on save (RustRover: <em>Settings → Rust → Rustfmt → Run on save</em>).</p>
+      </li>
+      <li>
+        <p>Add this function to the domain crate, then run clippy:</p>
+<pre data-label="crates/tuiwer-domain/src/lib.rs"><code class="language-rust">pub fn is_game_over(lives: u32) -&gt; bool {
+    if lives == 0 { return true; } else { return false; }
+}</code></pre>
+<pre data-label="fish"><code class="language-bash">cargo clippy --workspace --all-targets</code></pre>
+        <p>Read the warning. Each warning has a link to an explanation. Fix the code the way clippy suggests.
+          Then decide: do you need this function? If not, delete it.</p>
+      </li>
+      <li>
+        <p>Install the two helper tools. <code>cargo install</code> compiles them from source. This takes a few minutes:</p>
+<pre data-label="fish"><code class="language-bash">cargo install --locked bacon cargo-nextest</code></pre>
+        <p>The binaries go into <code>~/.cargo/bin</code>, which is already on your <code>PATH</code>.</p>
+      </li>
+      <li>
+        <p>Open a second terminal (or a Herdr pane) in the repository and start bacon:</p>
+<pre data-label="fish"><code class="language-bash">bacon</code></pre>
+        <p>Press <kbd>c</kbd> for clippy, <kbd>t</kbd> for tests, <kbd>h</kbd> for help. Change some code and save. Watch bacon react.
+          Keep bacon open during all lessons.</p>
+      </li>
+      <li>
+        <p>Try nextest:</p>
+<pre data-label="fish"><code class="language-bash">cargo nextest run --workspace</code></pre>
+      </li>
+    </ol>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 0.4-A: CI on GitHub</span>
+    <p>Create <code>.github/workflows/ci.yml</code> with three gates: format, clippy (warnings are errors) and tests.
+      Use these building blocks:</p>
+    <ul>
+      <li><code>actions/checkout@v4</code></li>
+      <li><code>dtolnay/rust-toolchain@stable</code> with <code>components: clippy, rustfmt</code></li>
+      <li><code>Swatinem/rust-cache@v2</code> (caches <code>target/</code> between runs)</li>
+    </ul>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>One job on <code>ubuntu-latest</code> is enough. Run it on push to <code>main</code> and on pull requests.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>You need three <code>run</code> steps after the setup steps. Use <code>--workspace</code> so all crates are checked.
+        For clippy, use <code>--all-targets</code> so tests are linted too, and pass <code>-- -D warnings</code>.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p>The three commands: <code>cargo fmt --all --check</code>, <code>cargo clippy --workspace --all-targets -- -D warnings</code>,
+        <code>cargo test --workspace</code>. The toolchain step uses <code>with:</code> for <code>components</code>.</p></details>
+    <p>Then publish the repository. This makes it visible on GitHub, so check the content first:</p>
+<pre data-label="fish"><code class="language-bash">git status
+git add -A
+git commit -m "Add CI"
+gh repo create tuiwer-defense --public --source . --push</code></pre>
+    <p>Use <code>--private</code> if you prefer. You can change it later.</p>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">gh run watch</code></pre>
+    <p>The run is green. Then break the format in a small commit, push, and watch the run fail. Fix it, push again.</p>
+  </section>
+
+  <section class="block showoff">
+    <span class="block-tag">Show-off</span>
+    <p>Add a CI badge to the top of <code>README.md</code>. Replace <code>OWNER</code> with your GitHub name:</p>
+<pre data-label="README.md"><code class="language-markdown">![CI](https://github.com/OWNER/tuiwer-defense/actions/workflows/ci.yml/badge.svg)</code></pre>
+    <p>A green badge on day one. Keep it green for the whole course.</p>
+  </section>
+
+  <section class="block boss">
+    <span class="block-tag">Boss fight</span>
+    <p>Turn on the stricter <code>clippy::pedantic</code> group for the workspace. Add this to the root <code>Cargo.toml</code>:</p>
+<pre data-label="Cargo.toml"><code class="language-ini">[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }</code></pre>
+    <p>Some pedantic lints are noisy. Find one lint you disagree with, and allow it in the same section with a comment that explains why.
+      Decide if you keep pedantic for the course. Both answers are fine. The point is to know that you can choose.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p><code>rustfmt</code> has almost no options on purpose. Code style arguments waste time, so the community chose one style
+      for everybody. When you read any Rust project on GitHub, it looks familiar. Go did the same with <code>gofmt</code>, and Rust copied the idea.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">Here is my ci.yml. Is anything missing or wrong for a Rust workspace? List problems only. Do not rewrite the file.</div>
+  </section>
+</main>
+</body>
+</html>

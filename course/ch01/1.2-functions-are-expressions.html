@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Functions Are Expressions</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="1.2" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 1: First steps</div>
+  <h1>1.2 Functions are expressions</h1>
+  <div class="meta"><span>≈ 25 min</span><span>Domain crate</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Know the difference between an expression and a statement, and the role of <code>;</code>.</li>
+      <li>Use <code>if</code>, blocks and <code>loop</code> as values.</li>
+      <li>Write the wave rules: how many enemies, and how long the build phase lasts.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>C#</th><th>Rust</th></tr>
+      <tr><td><code>int Twice(int x) =&gt; x * 2;</code></td><td><code>fn twice(x: i32) -&gt; i32 { x * 2 }</code></td></tr>
+      <tr><td><code>void Log() { … }</code></td><td><code>fn log() { … }</code> (returns <code>()</code>)</td></tr>
+      <tr><td><code>cond ? a : b</code></td><td><code>if cond { a } else { b }</code></td></tr>
+      <tr><td><code>x switch { … }</code></td><td><code>match x { … }</code> (chapter 2)</td></tr>
+      <tr><td><code>for (int i = 1; i &lt;= n; i++)</code></td><td><code>for i in 1..=n</code></td></tr>
+      <tr><td><code>while (true) { … break; }</code></td><td><code>loop { … break value; }</code></td></tr>
+      <tr><td>default parameter values, overloads</td><td>none: use different names, or a struct (lesson 1.3)</td></tr>
+    </table>
+    </div>
+    <p>F# again: in F#, everything is an expression and the last line is the result. Rust works the same way. The only new thing is the <code>;</code>.</p>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>The semicolon throws the value away</h2>
+    <figure>
+      <svg viewBox="0 0 720 200" role="img" aria-label="An expression without a semicolon is the block's value. With a semicolon, the block's value is unit.">
+        <style>
+          .bx { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; }
+          .ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 2; }
+          .bad { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 2; }
+          .mono { fill: var(--text); font: 15px ui-monospace, monospace; }
+          .lbl { fill: var(--muted); font: 600 12px system-ui, sans-serif; }
+          .res { fill: var(--text); font: 600 14px system-ui, sans-serif; }
+          .arr { stroke: var(--muted); stroke-width: 2; fill: none; }
+        </style>
+        <text class="lbl" x="20" y="24">WITHOUT ;</text>
+        <rect class="bx" x="20" y="34" width="300" height="56" rx="6"/>
+        <text class="mono" x="36" y="68">{ base + wave * 2 }</text>
+        <path class="arr" d="M320 62 H390"/>
+        <rect class="ok" x="390" y="34" width="310" height="56" rx="6"/>
+        <text class="res" x="406" y="68">value of the block: u32 ✓</text>
+
+        <text class="lbl" x="20" y="124">WITH ;</text>
+        <rect class="bx" x="20" y="134" width="300" height="56" rx="6"/>
+        <text class="mono" x="36" y="168">{ base + wave * 2; }</text>
+        <path class="arr" d="M320 162 H390"/>
+        <rect class="bad" x="390" y="134" width="310" height="56" rx="6"/>
+        <text class="res" x="406" y="168">value of the block: () ✗</text>
+      </svg>
+      <figcaption>A function body is a block. Its value is the value of its last expression.</figcaption>
+    </figure>
+<pre data-label="rust"><code class="language-rust">fn reward(is_boss: bool) -&gt; u32 {
+    let base = if is_boss { 50 } else { 5 };   // if is an expression
+    let bonus = {                               // a block is an expression
+        let multiplier = 2;
+        base * multiplier                       // no ; = the block's value
+    };
+    base + bonus                                // the function's value
+}</code></pre>
+    <p><code>return</code> exists, but use it only for an <strong>early</strong> exit. The normal result is the last expression.</p>
+    <p>Both branches of an <code>if</code> must have the same type. An <code>if</code> without <code>else</code> has the type <code>()</code>.</p>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Loops in two minutes</h2>
+<pre data-label="rust"><code class="language-rust">for wave in 1..=3 { println!("wave {wave}"); }   // 1, 2, 3  (..= includes the end)
+for i in 0..3 { println!("index {i}"); }          // 0, 1, 2  (.. excludes the end)
+
+let mut n = 0;
+let first_big = loop {          // loop + break value = a value
+    n += 7;
+    if n &gt; 30 { break n; }
+};                              // first_big == 35</code></pre>
+    <ol class="steps">
+      <li>Write this code in a test with <code>--nocapture</code>. Change <code>..=</code> to <code>..</code> and see the difference.</li>
+      <li>Change <code>break n</code> to only <code>break</code>. The code still compiles. Hover over <code>first_big</code> in your editor (Neovim: <kbd>K</kbd>). What is its type now? Why?</li>
+    </ol>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 1.2-A: wave rules</span>
+    <p>Write three public functions in the domain crate. These are the rules:</p>
+    <ul>
+      <li><code>enemies_in_wave(wave: u32) -&gt; u32</code>: wave 1 has 5 enemies. Each wave adds 2. <strong>Every 5th wave</strong> (5, 10, …) is a boss wave with only 1 enemy.</li>
+      <li><code>build_time_secs(wave: u32) -&gt; u32</code>: wave 1 gives 30 seconds. Each wave removes 2 seconds. Never less than 10.</li>
+      <li><code>total_enemies(up_to_wave: u32) -&gt; u32</code>: the sum of the enemies of waves 1 to <code>up_to_wave</code>. Use a <code>for</code> loop.</li>
+    </ul>
+<pre data-label="tests to add"><code class="language-rust">#[test]
+fn normal_waves_grow_by_two() {
+    assert_eq!(enemies_in_wave(1), 5);
+    assert_eq!(enemies_in_wave(2), 7);
+    assert_eq!(enemies_in_wave(4), 11);
+    assert_eq!(enemies_in_wave(6), 15);
+}
+
+#[test]
+fn every_fifth_wave_is_a_boss() {
+    assert_eq!(enemies_in_wave(5), 1);
+    assert_eq!(enemies_in_wave(10), 1);
+}
+
+#[test]
+fn build_time_shrinks_to_a_minimum() {
+    assert_eq!(build_time_secs(1), 30);
+    assert_eq!(build_time_secs(2), 28);
+    assert_eq!(build_time_secs(11), 10);
+    assert_eq!(build_time_secs(50), 10);
+}
+
+#[test]
+fn total_counts_all_waves() {
+    assert_eq!(total_enemies(3), 5 + 7 + 9);
+    assert_eq!(total_enemies(5), 5 + 7 + 9 + 11 + 1);
+    assert_eq!(total_enemies(0), 0);
+}</code></pre>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>Each rule is one <code>if</code> expression. Look again at <code>build_time_secs(50)</code>: what happens with plain subtraction?</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>“Every 5th” is a remainder: the <code>%</code> operator. Then run clippy: it suggests a more readable method. Accept it. For the build time, reuse what you learned in 1.1. For the total,
+        you need a <code>let mut</code> accumulator and a range with <code>..=</code>.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>if wave.is_multiple_of(5) { 1 } else { 5 + (wave - 1) * 2 }</code> is the shape of the first one.
+        For the second, compute the reduction with <code>saturating_sub</code>, then apply <code>.max(10)</code>.</p></details>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace; and cargo clippy --workspace --all-targets</code></pre>
+    <p>Green? Commit: <code>git commit -am "Add wave rules"</code>.</p>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>In <code>enemies_in_wave</code>, add a <code>;</code> after the last expression. Run <code>cargo build</code>.</p>
+    <p>Read <code>E0308</code>: <em>expected <code>u32</code>, found <code>()</code></em>. Find the <code>help: remove this semicolon</code> line.
+      You will make this mistake often in the first week. Now you can recognise it in one second.</p>
+  </section>
+
+  <section class="block boss">
+    <span class="block-tag">Boss fight</span>
+    <p>What does <code>enemies_in_wave(0)</code> return? Is wave 0 a valid input? Write a test that documents your decision.
+      Then write <code>total_enemies</code> a second time, as one line, without <code>mut</code>.
+      Search the std docs for <code>Iterator::sum</code> and <code>Iterator::map</code>. You will meet them properly in chapter 5.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Rust took “everything is an expression” from the ML family of languages (OCaml, and so F#). The first Rust compiler was written in OCaml.
+      This is why Rust has no ternary operator: <code>if</code> already does the job.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>Rust has no function overloading and no default parameters. In C#, <code>Spawn(int count)</code> and <code>Spawn(int count, bool boss = false)</code>
+      can live together. In Rust you write <code>spawn</code> and <code>spawn_boss</code>, or you pass a struct with options.
+      The reason: type inference works much better when one name has exactly one signature.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">Review my wave rules. Are my if-expressions idiomatic? Is there an edge case my tests miss? Do not give me code.</div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rust Glossary</title>
+  <link rel="stylesheet" href="assets/course.css">
+  <script src="assets/course.js"></script>
+</head>
+<body>
+<main>
+  <div class="crumbs"><a href="index.html">Course map</a> / Glossary</div>
+  <h1>Glossary</h1>
+  <p class="subtitle">Each Rust term has one meaning in this course. The C# column gives the nearest idea.
+    “Nearest” does not mean “the same”: read the notes.</p>
+
+  <div class="table-wrap">
+  <table>
+    <tr><th>Rust term</th><th>Nearest C# idea</th><th>Meaning in this course</th></tr>
+
+    <tr id="associated-function"><td>associated function</td><td>static method</td><td>A function in an <code>impl</code> block without <code>self</code>. Call it with <code>Type::name()</code>. <code>new</code> is a convention, not a keyword.</td></tr>
+    <tr id="borrow"><td>borrow</td><td>(none)</td><td>To use a value through a reference, without taking ownership. <code>&amp;T</code> is a shared borrow. <code>&amp;mut T</code> is an exclusive borrow.</td></tr>
+    <tr id="borrow-checker"><td>borrow checker</td><td>(none)</td><td>The part of the compiler that proves all borrows are valid. It runs at compile time only.</td></tr>
+    <tr id="cargo"><td>cargo</td><td><code>dotnet</code> CLI + NuGet</td><td>The build tool and package manager. It builds, tests, runs and adds dependencies.</td></tr>
+    <tr id="clippy"><td>clippy</td><td>Roslyn analyzers</td><td>A linter with hundreds of checks. Run it with <code>cargo clippy</code>.</td></tr>
+    <tr id="clone"><td>Clone</td><td><code>ICloneable</code> (but typed)</td><td>A trait for an explicit copy: <code>value.clone()</code>. It can be expensive.</td></tr>
+    <tr id="copy"><td>Copy</td><td>value-type assignment</td><td>A trait for small values that copy implicitly on assignment, like <code>u32</code> or a small struct.</td></tr>
+    <tr id="crate"><td>crate</td><td>assembly / project</td><td>One unit of compilation: a library or a binary.</td></tr>
+    <tr id="derive"><td>derive</td><td>source generator</td><td><code>#[derive(Debug, Clone)]</code> makes the compiler write a trait implementation for you.</td></tr>
+    <tr id="edition"><td>edition</td><td><code>LangVersion</code></td><td>A set of language rules. This course uses edition 2024. Crates of different editions work together.</td></tr>
+    <tr id="enum"><td>enum</td><td>F# discriminated union</td><td>A type that is one of several variants. Each variant can hold data. Much more than a C# enum.</td></tr>
+    <tr id="expression"><td>expression</td><td>expression</td><td>Code that gives a value. In Rust, <code>if</code>, <code>match</code> and blocks are expressions.</td></tr>
+    <tr id="impl"><td>impl block</td><td>class body</td><td>The place where you write methods for a type. A type can have many <code>impl</code> blocks.</td></tr>
+    <tr id="lifetime"><td>lifetime</td><td>(none)</td><td>The region of code where a reference is valid. Written <code>'a</code>. Chapter 10.</td></tr>
+    <tr id="macro"><td>macro</td><td>source generator (loosely)</td><td>Code that writes code at compile time. Its name ends with <code>!</code>, for example <code>println!</code>.</td></tr>
+    <tr id="method"><td>method</td><td>instance method</td><td>A function in an <code>impl</code> block whose first parameter is <code>self</code>, <code>&amp;self</code> or <code>&amp;mut self</code>.</td></tr>
+    <tr id="move"><td>move</td><td>(none)</td><td>To give ownership of a value to another variable or function. After a move, the old variable is not usable.</td></tr>
+    <tr id="newtype"><td>newtype</td><td>single-field record struct</td><td>A tuple struct that wraps one value, like <code>struct Gold(u32)</code>. It stops you mixing up values of the same raw type.</td></tr>
+    <tr id="option"><td>Option&lt;T&gt;</td><td><code>T?</code> (nullable)</td><td>A value that is <code>Some(value)</code> or <code>None</code>. Rust has no null. Chapter 4.</td></tr>
+    <tr id="ownership"><td>ownership</td><td>(the GC, inverted)</td><td>Each value has exactly one owner. When the owner goes out of scope, the value is dropped. Chapter 3.</td></tr>
+    <tr id="package"><td>package</td><td><code>.csproj</code></td><td>A folder with a <code>Cargo.toml</code>. It contains one or more crates.</td></tr>
+    <tr id="panic"><td>panic</td><td>unhandled exception</td><td>A crash for bugs, not for expected errors. Expected errors use <code>Result</code>.</td></tr>
+    <tr id="result"><td>Result&lt;T, E&gt;</td><td>exceptions / <code>TryParse</code></td><td>A value that is <code>Ok(value)</code> or <code>Err(error)</code>. Chapter 4.</td></tr>
+    <tr id="rust-analyzer"><td>rust-analyzer</td><td>Roslyn language server</td><td>The language server. It gives completion, errors and refactors in your editor.</td></tr>
+    <tr id="rustfmt"><td>rustfmt</td><td><code>dotnet format</code></td><td>The standard formatter. Everybody uses the same style.</td></tr>
+    <tr id="rustup"><td>rustup</td><td>.NET SDK installer + <code>global.json</code></td><td>The tool that installs and updates Rust toolchains.</td></tr>
+    <tr id="shadowing"><td>shadowing</td><td>(none)</td><td>Declaring a new variable with the same name as an old one: <code>let x = x + 1;</code>. The old one is hidden.</td></tr>
+    <tr id="slice"><td>slice</td><td><code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code></td><td>A borrowed view into a sequence: <code>&amp;[T]</code> or <code>&amp;str</code>.</td></tr>
+    <tr id="statement"><td>statement</td><td>statement</td><td>Code that does not give a value. A <code>;</code> turns an expression into a statement.</td></tr>
+    <tr id="str"><td>&amp;str</td><td><code>ReadOnlySpan&lt;char&gt;</code></td><td>A borrowed string slice. String literals are <code>&amp;'static str</code>.</td></tr>
+    <tr id="string"><td>String</td><td><code>StringBuilder</code> (owned, growable)</td><td>An owned, growable UTF-8 string on the heap.</td></tr>
+    <tr id="struct"><td>struct</td><td><code>struct</code> / <code>record struct</code></td><td>A type with named fields. No inheritance. Stored inline, not behind a reference.</td></tr>
+    <tr id="toolchain"><td>toolchain</td><td>an SDK version</td><td>One version of <code>rustc</code>, <code>cargo</code> and the other tools, installed by rustup.</td></tr>
+    <tr id="trait"><td>trait</td><td>interface</td><td>A set of methods a type can implement. Traits can be implemented for types you do not own. Chapter 6.</td></tr>
+    <tr id="unit"><td>unit type <code>()</code></td><td><code>void</code></td><td>The type with one value, <code>()</code>. Functions without a return type return it. Unlike <code>void</code>, it is a real value.</td></tr>
+    <tr id="usize"><td>usize</td><td><code>nint</code> (unsigned)</td><td>An unsigned integer with the size of a pointer. Used for indexes and lengths.</td></tr>
+    <tr id="vec"><td>Vec&lt;T&gt;</td><td><code>List&lt;T&gt;</code></td><td>A growable array on the heap.</td></tr>
+    <tr id="workspace"><td>workspace</td><td><code>.sln</code></td><td>A group of packages that share one <code>Cargo.lock</code> and one <code>target/</code> folder.</td></tr>
+  </table>
+  </div>
+  <p>The glossary grows with each chapter.</p>
+</main>
+</body>
+</html>

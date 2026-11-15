@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bindings and Types</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="1.1" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 1: First steps</div>
+  <h1>1.1 Bindings and scalar types</h1>
+  <div class="meta"><span>≈ 25 min</span><span>Domain crate</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Declare variables with <code>let</code> and <code>let mut</code>, and know why immutable is the default.</li>
+      <li>Use shadowing to change a value's type or meaning.</li>
+      <li>Choose integer types, and convert between them on purpose.</li>
+      <li>Write the first game rule: damage after armor.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>C#</th><th>Rust</th><th>Difference</th></tr>
+      <tr><td><code>var gold = 100;</code></td><td><code>let gold = 100;</code></td><td>Rust: <strong>immutable</strong>. You cannot assign again.</td></tr>
+      <tr><td><code>var gold = 100; gold += 5;</code></td><td><code>let mut gold = 100; gold += 5;</code></td><td>You must say <code>mut</code>.</td></tr>
+      <tr><td><code>const int MaxWaves = 10;</code></td><td><code>const MAX_WAVES: u32 = 10;</code></td><td>Type is required. Name is <code>SCREAMING_CASE</code>.</td></tr>
+      <tr><td><code>int</code>, <code>uint</code>, <code>byte</code>, <code>long</code></td><td><code>i32</code>, <code>u32</code>, <code>u8</code>, <code>i64</code></td><td>The size is in the name.</td></tr>
+      <tr><td><code>int</code> for an index</td><td><code>usize</code></td><td>Indexes and lengths are always <code>usize</code>.</td></tr>
+      <tr><td><code>long x = myInt;</code> (implicit)</td><td><code>let x: i64 = my_i32.into();</code></td><td><strong>No implicit conversions</strong>, not even widening.</td></tr>
+      <tr><td><code>(int)myLong</code></td><td><code>my_i64 as i32</code></td><td><code>as</code> can truncate silently. Prefer <code>try_from</code> (chapter 4).</td></tr>
+      <tr><td><code>unchecked</code> overflow</td><td>debug: panic · release: wraps</td><td>Use <code>checked_*</code>, <code>saturating_*</code>, <code>wrapping_*</code> to choose.</td></tr>
+      <tr><td><code>char</code> (UTF-16)</td><td><code>char</code> (4 bytes, any Unicode scalar)</td><td><code>'🏰'</code> is one <code>char</code>.</td></tr>
+      <tr><td>(no equivalent)</td><td><code>let x = x * 2;</code></td><td><a href="../glossary.html#shadowing">Shadowing</a>: a new variable with the same name.</td></tr>
+    </table>
+    </div>
+    <p>In F#, <code>let</code> is also immutable and <code>let mutable</code> is the exception. Rust made the same choice.</p>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>Mutation is visible</h2>
+    <p>In Rust, you can see every place that changes a value. Look for <code>mut</code>. If a binding has no <code>mut</code>,
+      its value does not change. This is a big help when you read code, and it is the base for the borrowing rules in chapter 3.</p>
+<pre data-label="rust"><code class="language-rust">let lives = 20;            // immutable
+let mut gold = 100;        // mutable: the reader is warned
+gold -= 30;
+
+let input = "42";          // &amp;str
+let input: u32 = input.parse().unwrap();   // shadowing: same name, new type
+// the old `input` is hidden, not changed</code></pre>
+    <p>Shadowing is not mutation. It creates a <strong>new</strong> variable. Use it when a value changes form,
+      like text that becomes a number. <code>.unwrap()</code> means “crash if this failed”. Chapter 4 replaces it.</p>
+
+    <h3>Integer types</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Signed</th><th>Unsigned</th><th>Use in this game</th></tr>
+      <tr><td><code>i8</code> … <code>i128</code></td><td><code>u8</code> … <code>u128</code></td><td><code>u32</code> for gold, lives, damage. They are never negative.</td></tr>
+      <tr><td><code>isize</code></td><td><code>usize</code></td><td><code>usize</code> for indexes into lists.</td></tr>
+      <tr><td colspan="2"><code>f32</code>, <code>f64</code></td><td>Avoid in game rules. Floats make tests and replays harder.</td></tr>
+    </table>
+    </div>
+    <p>An unsigned type makes a whole class of bugs impossible: gold can never be −5. But you must handle the edges.
+      What is <code>3 - 5</code> for a <code>u32</code>?</p>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Explore in a test</h2>
+    <ol class="steps">
+      <li>
+        <p>Add this test to the <code>tests</code> module in <code>tuiwer-domain/src/lib.rs</code>. Run it with <code>cargo test --workspace</code>.</p>
+        <p class="note">Always add <code>--workspace</code> (or <code>-p tuiwer-domain</code>). Without it, cargo uses <code>default-members</code> and tests only the TUI crate.</p>
+<pre data-label="crates/tuiwer-domain/src/lib.rs"><code class="language-rust">#[test]
+fn explore_unsigned_edges() {
+    let small: u32 = 3;
+    println!("checked:    {:?}", small.checked_sub(5));
+    println!("saturating: {}", small.saturating_sub(5));
+    println!("wrapping:   {}", small.wrapping_sub(5));
+    println!("plain:      {}", small - 5);
+}</code></pre>
+        <p>It does not even compile. Read the error: the compiler knows that <code>small</code> is 3, so it sees the overflow <strong>before</strong> the program runs.</p>
+      </li>
+      <li>
+        <p>Hide the value from the compiler. Change the first line, then run the test again:</p>
+<pre data-label="rust"><code class="language-rust">let small: u32 = std::hint::black_box(3);</code></pre>
+        <p><code>black_box</code> stops the compiler from knowing the value. Now the test compiles and fails at run time. Read the panic message.</p>
+      </li>
+      <li>
+        <p>Tests hide <code>println!</code> output when they pass. To see it, remove the last line and run:</p>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace -- --nocapture</code></pre>
+      </li>
+      <li>
+        <p>Put the last line back. Now run the test in <strong>release</strong> mode:</p>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace --release -- --nocapture</code></pre>
+        <p>No panic: the value wraps around silently. Debug builds check overflow, release builds do not.
+          So never trust plain <code>-</code> at an edge. Say what you want.</p>
+      </li>
+      <li>Delete the exploration test before you commit.</li>
+    </ol>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 1.1-A</span>
+    <p>Add two constants and one game rule to the domain crate:</p>
+    <ul>
+      <li><code>STARTING_GOLD</code> is 100 and <code>STARTING_LIVES</code> is 20. Both are public <code>u32</code> constants.</li>
+      <li><code>damage_after_armor(damage, armor)</code> takes two <code>u32</code> values. Armor reduces the damage. A hit always does at least 1 damage.</li>
+    </ul>
+    <p>Write the tests first. Make them fail, then pass:</p>
+<pre data-label="tests to add"><code class="language-rust">#[test]
+fn armor_reduces_damage() {
+    assert_eq!(damage_after_armor(10, 3), 7);
+}
+
+#[test]
+fn zero_armor_keeps_damage() {
+    assert_eq!(damage_after_armor(4, 0), 4);
+}
+
+#[test]
+fn a_hit_always_does_at_least_one_damage() {
+    assert_eq!(damage_after_armor(2, 5), 1);
+    assert_eq!(damage_after_armor(0, 0), 1);
+}
+
+#[test]
+fn starting_values() {
+    assert_eq!(STARTING_GOLD, 100);
+    assert_eq!(STARTING_LIVES, 20);
+}</code></pre>
+    <p>Use this signature. The body is yours:</p>
+<pre data-label="signature"><code class="language-rust">pub fn damage_after_armor(damage: u32, armor: u32) -&gt; u32</code></pre>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>What happens when <code>armor</code> is larger than <code>damage</code>? Your explore test gave the answer.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>Integer types have methods. Look at <code>u32</code> in <code>rustup doc --std</code>. You need one method that stops at zero,
+        and one method that gives the larger of two values. Methods can be chained.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>saturating_sub</code> and <code>max</code>. The body is one expression, without <code>return</code> and without <code>;</code>.</p></details>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace; and cargo clippy --workspace --all-targets</code></pre>
+    <p>All tests pass. Clippy shows no warning. Commit.</p>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>Add this to a test, then read both errors:</p>
+<pre data-label="rust"><code class="language-rust">let lives: u32 = 20;
+let leaked: i32 = 3;
+let left = lives - leaked;     // error 1
+let tiny: u8 = 255 + 1;        // error 2</code></pre>
+    <ol>
+      <li>You get <code>E0308</code> <em>mismatched types</em> and <code>E0277</code> <em>cannot subtract <code>i32</code> from <code>u32</code></em>.
+        Rust never mixes <code>u32</code> and <code>i32</code>, and <code>-</code> is defined only for two values of the same type. The <code>help</code> line suggests a conversion. Is it safe here?</li>
+      <li>The second line shows no error yet. The compiler reports type errors first. Make <code>leaked</code> a <code>u32</code>, build again, and read the next error.
+        It is a <strong>lint</strong> at compile time: the compiler sees the overflow before the program runs, as in the hands-on.</li>
+    </ol>
+  </section>
+
+  <section class="block boss">
+    <span class="block-tag">Boss fight</span>
+    <p>Write <code>lives_after_leak(lives: u32, leaked: u32) -&gt; u32</code>. Then write
+      <code>gold_after_reward(gold: u32, reward: u32) -&gt; u32</code>. It must never overflow, even with <code>u32::MAX</code>.
+      Write the edge-case tests first. Ask yourself: is saturating the right rule for gold, or is it a bug that should be visible?
+      There is no single correct answer. Write your reason in a comment.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Implicit numeric conversions caused many real bugs in C and C++: a negative <code>int</code> becomes a huge <code>unsigned</code>,
+      and a bounds check passes when it must fail. Rust removed all implicit conversions. It is more typing, but each conversion is
+      a visible decision. For the same reason, debug builds check overflow: you find the bug in tests, not in production.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>The type of an integer literal comes from how you use it. <code>let x = 5;</code> becomes <code>i32</code> only if nothing else decides.
+      If you later pass <code>x</code> to a function that takes <code>u8</code>, the literal becomes <code>u8</code>. Inference works on the whole function,
+      not only on one line like C# <code>var</code>. You can also write a suffix: <code>5u8</code>, <code>1_000_000u64</code>. The <code>_</code> is only for reading.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">I used saturating_sub for gold. Give me one argument for and one against, from a game-design view and from a bug-finding view. Do not show code.</div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workspace Skeleton</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="0.3" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 0: Setup and toolchain</div>
+  <h1>0.3 The workspace skeleton</h1>
+  <div class="meta"><span>≈ 25 min</span><span>First game code</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Create the Cargo workspace for Tuiwer Defense with two crates.</li>
+      <li>See that Cargo enforces the dependency direction of your architecture.</li>
+      <li>Write and run your first unit test.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>.NET</th><th>Rust</th></tr>
+      <tr><td><code>TuiwerDefense.sln</code></td><td>Root <code>Cargo.toml</code> with a <code>[workspace]</code> section</td></tr>
+      <tr><td><code>Domain.csproj</code> (class library)</td><td><code>crates/tuiwer-domain</code> (library crate)</td></tr>
+      <tr><td><code>Tui.csproj</code> (console app)</td><td><code>crates/tuiwer-tui</code> (binary crate)</td></tr>
+      <tr><td><code>&lt;ProjectReference&gt;</code></td><td><code>tuiwer-domain = { path = "..." }</code></td></tr>
+      <tr><td><code>Directory.Build.props</code></td><td><code>[workspace.package]</code> and <code>[workspace.lints]</code></td></tr>
+      <tr><td>A separate xUnit test project</td><td>Tests live <strong>in the same file</strong>, in a <code>#[cfg(test)]</code> module</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>The target layout</h2>
+<pre data-label="tree"><code class="language-plaintext">tuiwer-defense/
+├── Cargo.toml              ← workspace (like the .sln)
+├── Cargo.lock              ← one lock file for all crates
+├── crates/
+│   ├── tuiwer-domain/      ← library: rules, no I/O
+│   │   ├── Cargo.toml
+│   │   └── src/lib.rs
+│   └── tuiwer-tui/         ← binary: terminal + main()
+│       ├── Cargo.toml
+│       └── src/main.rs
+├── course/                 ← this course
+└── target/                 ← build output (ignored by git)</code></pre>
+    <pre class="mermaid">
+flowchart LR
+    tui["tuiwer-tui (bin)"] -- "depends on" --> domain["tuiwer-domain (lib)"]
+    domain -. "cannot see" .-> tui
+    </pre>
+    <p>The domain crate does not list the TUI crate as a dependency. So the domain <strong>cannot</strong> use TUI code.
+      In C#, you need architecture tests or discipline for this. In Rust, the build fails.</p>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Build the skeleton</h2>
+    <ol class="steps">
+      <li>
+        <p>Go to the repository. It already contains git, the course and a <code>.gitignore</code>.</p>
+<pre data-label="fish"><code class="language-bash">cd ~/sources/tuiwer-defense
+git status</code></pre>
+      </li>
+      <li>
+        <p>Create the root <code>Cargo.toml</code>. Type it yourself. Read each line while you type:</p>
+<pre data-label="Cargo.toml"><code class="language-ini">[workspace]
+resolver = "3"
+members = ["crates/*"]
+default-members = ["crates/tuiwer-tui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"</code></pre>
+        <ul>
+          <li><code>resolver = "3"</code>: the dependency resolver for edition 2024. A workspace must set it.</li>
+          <li><code>members</code>: every folder in <code>crates/</code> is part of the workspace.</li>
+          <li><code>default-members</code>: <code>cargo run</code> in the root starts the TUI.</li>
+          <li><code>[workspace.package]</code>: values that crates can inherit.</li>
+          <li><code>unsafe_code = "forbid"</code>: no <code>unsafe</code> code in this project. Chapter 17 explains why it exists.</li>
+        </ul>
+      </li>
+      <li>
+        <p>Create the two crates:</p>
+<pre data-label="fish"><code class="language-bash">cargo new --lib crates/tuiwer-domain
+cargo new crates/tuiwer-tui</code></pre>
+        <p>Cargo sees the existing git repository. It does not create a second one.</p>
+      </li>
+      <li>
+        <p>Open <code>crates/tuiwer-domain/Cargo.toml</code>. Cargo found the workspace and wrote
+          inheritance lines for you:</p>
+<pre data-label="crates/tuiwer-domain/Cargo.toml"><code class="language-ini">[package]
+name = "tuiwer-domain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true</code></pre>
+        <p><code>version.workspace = true</code> means “use the value from <code>[workspace.package]</code>”.
+          Change the version in one place, and all crates follow. This is <code>Directory.Build.props</code>, without the XML.</p>
+      </li>
+      <li>
+        <p>Make the TUI depend on the domain:</p>
+<pre data-label="fish"><code class="language-bash">cargo add --package tuiwer-tui --path crates/tuiwer-domain</code></pre>
+        <p>Open <code>crates/tuiwer-tui/Cargo.toml</code> and find the new line.</p>
+      </li>
+      <li>
+        <p>Build everything and run the tests that <code>cargo new</code> generated:</p>
+<pre data-label="fish"><code class="language-bash">cargo build --workspace
+cargo test --workspace</code></pre>
+        <p>Look at the generated test in <code>crates/tuiwer-domain/src/lib.rs</code>.
+          The <code>#[cfg(test)]</code> line means: compile this module only for tests.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 0.3-A</span>
+    <p>Replace the generated code in <code>tuiwer-domain/src/lib.rs</code> with a public function
+      <code>game_title</code>. It returns the text <code>"Tuiwer Defense"</code>.
+      Start with this test. It must fail first (red), then pass (green):</p>
+<pre data-label="crates/tuiwer-domain/src/lib.rs"><code class="language-rust">#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn title_is_tuiwer_defense() {
+        assert_eq!(game_title(), "Tuiwer Defense");
+    }
+}</code></pre>
+    <p>Then make <code>main</code> in the TUI crate print the title, using <code>tuiwer_domain::game_title()</code>.</p>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>A function is private by default. The TUI crate needs to see it.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>The keyword <code>pub</code> makes an item public. The return type of a text literal is <code>&amp;'static str</code>:
+        a borrowed string that lives for the whole program. Chapter 3 explains <code>&amp;</code> and chapter 10 explains <code>'static</code>.
+        For now, read it as “a fixed text”.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>pub fn game_title() -&gt; &amp;'static str { … }</code>. The body is only the text literal, with no <code>return</code> and no <code>;</code>.
+        In <code>main</code>: <code>println!("{}", tuiwer_domain::game_title());</code>. Note the crate name uses <code>_</code> in code.</p></details>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace; and cargo run</code></pre>
+    <p>One test passes. The program prints <code>Tuiwer Defense</code>. Commit:</p>
+<pre data-label="fish"><code class="language-bash">git add -A
+git commit -m "Create workspace with domain and tui crates"</code></pre>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>Prove that the architecture rule works. Add this line at the top of <code>tuiwer-domain/src/lib.rs</code>:</p>
+<pre data-label="crates/tuiwer-domain/src/lib.rs"><code class="language-rust">use tuiwer_tui;</code></pre>
+    <p>Run <code>cargo build</code>. Read error <code>E0432</code>. The domain cannot see the TUI crate.
+      Now try to make it a dependency anyway:</p>
+<pre data-label="fish"><code class="language-bash">cargo add --package tuiwer-domain --path crates/tuiwer-tui</code></pre>
+    <p>Cargo adds the line. Now run <code>cargo build</code> again. Read the error: <em>cyclic package dependency</em>.
+      A cycle is never allowed between crates. Undo both changes:</p>
+<pre data-label="fish"><code class="language-bash">cargo remove --package tuiwer-domain tuiwer-tui
+git diff</code></pre>
+    <p>Also remove the <code>use</code> line. <code>git diff</code> must show only your exercise changes.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>Rust has three kinds of tests:</p>
+    <ul>
+      <li><strong>Unit tests</strong> in a <code>#[cfg(test)] mod tests</code> inside the source file. They can test private functions.</li>
+      <li><strong>Integration tests</strong> in a <code>tests/</code> folder. They see only the public API. Chapter 12.</li>
+      <li><strong>Doc tests</strong>: code examples in <code>///</code> comments. Cargo runs them. Chapter 8.</li>
+    </ul>
+    <p>As a testing expert, you will like this: there is no test framework to choose. <code>cargo test</code> is the framework.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">Review my Cargo.toml files. Is anything not idiomatic for a Rust workspace? Explain, but do not edit the files.</div>
+  </section>
+</main>
+</body>
+</html>

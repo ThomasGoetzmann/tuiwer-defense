@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tuiwer Defense Course</title>
+  <link rel="stylesheet" href="assets/course.css">
+  <script src="assets/vendor/mermaid.min.js"></script>
+  <script src="assets/course.js"></script>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="tag">LEARN RUST · BUILD A GAME</div>
+    <h1>Tuiwer Defense</h1>
+    <p class="subtitle">A Rust course for C# developers. You learn the language while you build a
+      tower defense game that runs in your terminal.</p>
+  </header>
+
+  <h2>Your progress</h2>
+  <div class="map-wrap" id="progress-map"></div>
+  <p class="progress-line" id="progress-line"></p>
+  <p class="note">Progress is stored in this browser only. Each lesson page has a
+    <strong>Mark lesson as done</strong> button at the bottom. Git is your real record of progress.</p>
+
+  <h2>How this course works</h2>
+  <ul>
+    <li>A <strong>chapter</strong> takes 1 to 2 hours. A <strong>lesson</strong> takes 15 to 25 minutes.</li>
+    <li>You write all the game code. The lessons give you goals, tests and hints. They do not give full solutions.</li>
+    <li>Each exercise has a <strong>check</strong>: a command that must be green before you continue.</li>
+    <li>Commit after each exercise. When you finish a lesson, ask your AI tutor for a review (see <a href="#ai">Use AI as a tutor</a>).</li>
+    <li>Lessons are independent pages. If a lesson is too large, split it. If two are easy, do them together.</li>
+  </ul>
+
+  <h3>The blocks in a lesson</h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Block</th><th>What it gives you</th></tr>
+    <tr><td>Goal</td><td>What you can do at the end of the lesson.</td></tr>
+    <tr><td>C# → Rust</td><td>What you already know, and what is different. F# appears when it helps.</td></tr>
+    <tr><td>Concept</td><td>The idea, with a diagram.</td></tr>
+    <tr><td>Hands-on</td><td>Steps to do now, on your machine.</td></tr>
+    <tr><td>Exercise</td><td>Game code to write, with three levels of hints.</td></tr>
+    <tr><td>Check</td><td>The command that proves the exercise works.</td></tr>
+    <tr><td>Compiler error of the day</td><td>Break the code on purpose. Learn to read the error.</td></tr>
+    <tr><td>Boss fight</td><td>An optional, harder challenge.</td></tr>
+    <tr><td>Show-off</td><td>Something visible to run and enjoy.</td></tr>
+    <tr><td>Why Rust does this</td><td>The design reason or history behind a feature.</td></tr>
+    <tr><td>Deep dive</td><td>Optional details. Skip them on the first read.</td></tr>
+    <tr><td>Ask the AI</td><td>Prompts that make the AI teach you, not code for you.</td></tr>
+  </table>
+  </div>
+
+  <h2>What you will build</h2>
+  <p>Tuiwer Defense is turn based. In the <strong>build phase</strong>, a timer counts down and you place towers.
+    Press <strong>Start</strong> to begin the wave early. In the <strong>wave phase</strong>, enemies walk along a fixed path
+    and your towers shoot them. If too many enemies reach the end, you lose.</p>
+
+  <pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Build
+    Build --> Wave: timer = 0 or Start
+    Wave --> Build: wave cleared
+    Wave --> Lost: lives = 0
+    Wave --> Won: last wave cleared
+    Lost --> [*]
+    Won --> [*]
+  </pre>
+
+  <h3>The architecture</h3>
+  <p>The game uses a clean architecture. The domain does not know about the terminal or about files.
+    Cargo enforces the dependency direction: a crate can only use the crates it lists.</p>
+
+  <pre class="mermaid">
+flowchart LR
+    tui["tuiwer-tui<br/>presentation + main<br/>(ratatui, crossterm)"]
+    infra["tuiwer-infra<br/>adapters: files, saves<br/>(serde) — from chapter 13"]
+    domain["tuiwer-domain<br/>rules, Commands, ports<br/>no I/O, fully tested"]
+    tui --> domain
+    tui --> infra
+    infra --> domain
+  </pre>
+
+  <p>The domain is <strong>deterministic</strong>. The presentation layer calls
+    <code>game.apply(command)</code> for player actions and <code>game.tick()</code> to move time forward.
+    Random numbers come from a seeded generator. This makes tests repeatable, and it makes future
+    features (build during a wave, a hero you control, a GUI) possible without domain rewrites.</p>
+
+  <h2>The chapters</h2>
+  <div id="chapter-list"></div>
+
+  <h2>Reference pages</h2>
+  <ul>
+    <li><a href="glossary.html">Glossary</a>: every Rust term, with the nearest C# term.</li>
+    <li><a href="appendix-a-neovim.html">Appendix A: Neovim for Rust</a>: what each config line does.</li>
+  </ul>
+
+  <h2 id="ai">Use AI as a tutor</h2>
+  <p>The repository has a <code>CLAUDE.md</code> file. It tells Claude to teach, not to write your game code.
+    Good requests are specific and ask for understanding:</p>
+  <div class="prompt">Explain this compiler error. Do not fix it. Ask me a question that leads me to the fix.</div>
+  <div class="prompt">Review my commits for lesson 1.3. Focus on idiomatic Rust. Compare with how I would do it in C#.</div>
+  <div class="prompt">Give me hint level 2 for exercise 1.4-A. Do not show code.</div>
+  <div class="prompt">Generate chapter 2. Read my current code first.</div>
+  <p class="warning">If the AI writes the code, you do not learn it. The compiler errors are the course.
+    Ask for code only when you already solved the problem and want to compare.</p>
+
+  <h2>Outside references</h2>
+  <ul>
+    <li><a href="https://doc.rust-lang.org/book/">The Rust Programming Language</a> (“the Book”). Also offline: <code>rustup doc --book</code>.</li>
+    <li><a href="https://doc.rust-lang.org/rust-by-example/">Rust by Example</a>.</li>
+    <li><a href="https://doc.rust-lang.org/std/">The standard library docs</a>. Also offline: <code>rustup doc --std</code>.</li>
+    <li><a href="https://ratatui.rs/">ratatui.rs</a> (from chapter 7).</li>
+  </ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Structs and Methods</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="1.3" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 1: First steps</div>
+  <h1>1.3 Structs and methods</h1>
+  <div class="meta"><span>≈ 25 min</span><span>Domain crate</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Define structs, and add methods in <code>impl</code> blocks.</li>
+      <li>Know <code>self</code>, <code>&amp;self</code> and <code>&amp;mut self</code> (a first look).</li>
+      <li>Use <code>#[derive]</code> to get equality, copying and debug output for free.</li>
+      <li>Model the first game types: <code>Position</code> and <code>Map</code>.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>C#</th><th>Rust</th><th>Difference</th></tr>
+      <tr><td><code>record struct Position(int X, int Y);</code></td><td><code>struct Position { x: u16, y: u16 }</code></td><td>No methods, equality or printing unless you ask.</td></tr>
+      <tr><td><code>class Map { … }</code></td><td><code>struct Map { … }</code> + <code>impl Map { … }</code></td><td>Data and methods are separate.</td></tr>
+      <tr><td>Constructor <code>new Map(…)</code></td><td><code>Map::new(…)</code></td><td>A normal <a href="../glossary.html#associated-function">associated function</a>, by convention.</td></tr>
+      <tr><td><code>this</code></td><td><code>self</code></td><td>Always written, as the first parameter.</td></tr>
+      <tr><td>Instance method</td><td><code>fn f(&amp;self)</code> or <code>fn f(&amp;mut self)</code></td><td>The signature says if the method changes the object.</td></tr>
+      <tr><td><code>public</code> / <code>private</code></td><td><code>pub</code> / (default)</td><td>Private means “private to the module”, not “private to the type”.</td></tr>
+      <tr><td><code>Equals</code>, <code>GetHashCode</code>, <code>ToString</code></td><td><code>#[derive(PartialEq, Eq, Hash, Debug)]</code></td><td>Generated, always correct.</td></tr>
+      <tr><td>Inheritance</td><td>none</td><td>Composition and traits (chapter 6).</td></tr>
+      <tr><td><code>null</code> fields</td><td>none</td><td>Every field must have a value when you create the struct.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>A struct is a value, not a reference</h2>
+    <figure>
+      <svg viewBox="0 0 740 270" role="img" aria-label="In C#, a list of class objects holds references to separate heap objects. In Rust, a Vec of structs holds the values side by side in one buffer.">
+        <style>
+          .h { fill: var(--text); font: 700 14px system-ui, sans-serif; }
+          .s { fill: var(--muted); font: 12px system-ui, sans-serif; }
+          .m { fill: var(--text); font: 12px ui-monospace, monospace; }
+          .cell { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; }
+          .obj { fill: var(--info-soft); stroke: var(--info); stroke-width: 1.5; }
+          .val { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+          .p { stroke: var(--info); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+        </style>
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--info)"/></marker></defs>
+
+        <text class="h" x="20" y="24">C#: List&lt;Position&gt; of a class</text>
+        <text class="s" x="20" y="42">the list holds references; each object is a separate heap allocation</text>
+        <rect class="cell" x="20" y="60" width="60" height="36"/><text class="m" x="36" y="83">ref</text>
+        <rect class="cell" x="80" y="60" width="60" height="36"/><text class="m" x="96" y="83">ref</text>
+        <rect class="cell" x="140" y="60" width="60" height="36"/><text class="m" x="156" y="83">ref</text>
+        <rect class="obj" x="40" y="140" width="80" height="44" rx="4"/><text class="m" x="50" y="160">hdr x=0</text><text class="m" x="50" y="176">y=1</text>
+        <rect class="obj" x="150" y="190" width="80" height="44" rx="4"/><text class="m" x="160" y="210">hdr x=1</text><text class="m" x="160" y="226">y=1</text>
+        <rect class="obj" x="250" y="130" width="80" height="44" rx="4"/><text class="m" x="260" y="150">hdr x=2</text><text class="m" x="260" y="166">y=1</text>
+        <path class="p" d="M50 96 L70 138"/>
+        <path class="p" d="M110 96 L180 188"/>
+        <path class="p" d="M170 96 L270 128"/>
+
+        <text class="h" x="400" y="24">Rust: Vec&lt;Position&gt; of a struct</text>
+        <text class="s" x="400" y="42">one buffer; the values sit side by side, no headers</text>
+        <rect class="val" x="400" y="60" width="96" height="36"/><text class="m" x="414" y="83">x=0 y=1</text>
+        <rect class="val" x="496" y="60" width="96" height="36"/><text class="m" x="510" y="83">x=1 y=1</text>
+        <rect class="val" x="592" y="60" width="96" height="36"/><text class="m" x="606" y="83">x=2 y=1</text>
+        <text class="s" x="400" y="124">size_of::&lt;Position&gt;() == 4 bytes (two u16)</text>
+        <text class="s" x="400" y="144">no GC, no indirection, cache friendly</text>
+      </svg>
+      <figcaption>A Rust struct behaves like a C# <code>struct</code>, but it can be as large and as rich as a class.</figcaption>
+    </figure>
+
+<pre data-label="rust"><code class="language-rust">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Position {
+    pub x: u16,
+    pub y: u16,
+}
+
+impl Position {
+    pub fn new(x: u16, y: u16) -&gt; Self {   // Self = Position
+        Self { x, y }                       // field init shorthand
+    }
+}
+
+pub struct Wallet {
+    gold: u32,                              // private field
+}
+
+impl Wallet {
+    pub fn gold(&amp;self) -&gt; u32 { self.gold }        // reads: &amp;self
+    pub fn earn(&amp;mut self, amount: u32) {           // changes: &amp;mut self
+        self.gold = self.gold.saturating_add(amount);
+    }
+}</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>First parameter</th><th>Meaning</th><th>Call site</th></tr>
+      <tr><td><code>&amp;self</code></td><td>Read the value. Most methods.</td><td><code>wallet.gold()</code></td></tr>
+      <tr><td><code>&amp;mut self</code></td><td>Change the value. The caller needs <code>let mut</code>.</td><td><code>wallet.earn(5)</code></td></tr>
+      <tr><td><code>self</code></td><td>Take the value. For <code>Copy</code> types, this is a cheap copy.</td><td><code>a.distance(b)</code></td></tr>
+      <tr><td>(none)</td><td>Associated function, like <code>static</code>.</td><td><code>Position::new(1, 2)</code></td></tr>
+    </table>
+    </div>
+    <p><code>#[derive(Copy, Clone)]</code> is for small, plain values. A <code>Position</code> is 4 bytes, so copying it is free. Chapter 3 explains what happens to types that are <strong>not</strong> <code>Copy</code>.</p>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 1.3-A: Position and Map</span>
+    <p>Add two types to the domain crate:</p>
+    <ul>
+      <li><code>Position</code>, as above, with a method <code>manhattan_distance(self, other: Position) -&gt; u16</code>: the number of grid steps between two positions.</li>
+      <li><code>Map</code> with <strong>private</strong> fields: <code>width: u16</code>, <code>height: u16</code> and <code>path: Vec&lt;Position&gt;</code>. Give it:
+        <ul>
+          <li><code>new(width, height, path) -&gt; Self</code></li>
+          <li><code>width(&amp;self)</code> and <code>height(&amp;self)</code> getters</li>
+          <li><code>contains(&amp;self, pos: Position) -&gt; bool</code>: is the position inside the map?</li>
+          <li><code>is_on_path(&amp;self, pos: Position) -&gt; bool</code></li>
+          <li><code>path_len(&amp;self) -&gt; usize</code></li>
+        </ul>
+      </li>
+    </ul>
+<pre data-label="tests to add"><code class="language-rust">fn small_map() -&gt; Map {
+    let path = vec![Position::new(0, 1), Position::new(1, 1), Position::new(2, 1)];
+    Map::new(3, 3, path)
+}
+
+#[test]
+fn manhattan_distance_counts_grid_steps() {
+    let a = Position::new(1, 2);
+    let b = Position::new(4, 0);
+    assert_eq!(a.manhattan_distance(b), 5);
+    assert_eq!(b.manhattan_distance(a), 5);
+}
+
+#[test]
+fn positions_are_equal_by_value() {
+    assert_eq!(Position::new(3, 4), Position { x: 3, y: 4 });
+}
+
+#[test]
+fn map_contains_only_inside_positions() {
+    let map = small_map();
+    assert!(map.contains(Position::new(0, 0)));
+    assert!(map.contains(Position::new(2, 2)));
+    assert!(!map.contains(Position::new(3, 0)));
+    assert!(!map.contains(Position::new(0, 3)));
+}
+
+#[test]
+fn map_knows_its_path() {
+    let map = small_map();
+    assert!(map.is_on_path(Position::new(1, 1)));
+    assert!(!map.is_on_path(Position::new(1, 0)));
+    assert_eq!(map.path_len(), 3);
+    assert_eq!((map.width(), map.height()), (3, 3));
+}</code></pre>
+    <p><code>vec![…]</code> is a macro that creates a <code>Vec</code> with values, like a C# collection initializer.</p>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>For the distance, you need the absolute difference of two unsigned numbers. Subtraction in the wrong order underflows.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>Integer types have an <code>abs_diff</code> method. A <code>Vec</code> has <code>len()</code> and <code>contains(&amp;value)</code>.
+        <code>contains</code> takes a <strong>reference</strong>, so you write <code>&amp;pos</code>. The <code>PartialEq</code> derive makes the comparison possible.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>self.x.abs_diff(other.x) + self.y.abs_diff(other.y)</code>. For <code>contains</code>: <code>pos.x &lt; self.width &amp;&amp; pos.y &lt; self.height</code>.
+        For <code>is_on_path</code>: <code>self.path.contains(&amp;pos)</code>.</p></details>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo test --workspace; and cargo clippy --workspace --all-targets</code></pre>
+    <p>Clippy may suggest <code>#[must_use]</code> or other small changes. Read each suggestion, and decide. Commit.</p>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>Three small experiments. Undo each one before the next.</p>
+    <ol>
+      <li>In a test, create <code>Position { x: 1 }</code>. Read <code>E0063</code>: every field needs a value. There is no <code>null</code> and no default.</li>
+      <li>In the TUI <code>main</code>, create a map and read <code>map.width</code> (the field, not the method). Read <code>E0616</code>: the field is private outside its module.</li>
+      <li>Remove <code>Copy</code> from the derive of <code>Position</code>. Run the tests. Read <code>E0382</code>: <em>use of moved value</em>.
+        <code>manhattan_distance(self, …)</code> took <code>b</code> away, so the second line cannot use it. This is <strong>ownership</strong>, the topic of chapter 3. Put <code>Copy</code> back.</li>
+    </ol>
+  </section>
+
+  <section class="block boss">
+    <span class="block-tag">Boss fight: newtypes</span>
+    <p>Lives and gold are both <code>u32</code>. Nothing stops <code>lives -= tower_cost</code>. Create a <a href="../glossary.html#newtype">newtype</a>
+      <code>pub struct Gold(u32);</code> with methods <code>can_afford(self, cost: Gold) -&gt; bool</code> and <code>spend(&amp;mut self, cost: Gold)</code>.
+      Write tests first. Then think: should <code>spend</code> be allowed to fail? You will return to this in chapter 4.</p>
+    <p>C# link: this solves “primitive obsession”, like a <code>readonly record struct Gold(uint Value)</code>. In Rust, the wrapper has <strong>zero</strong> runtime cost.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Rust has no inheritance on purpose. Deep class hierarchies create tight coupling and the “fragile base class” problem.
+      Rust keeps data (<code>struct</code>), behaviour (<code>impl</code>) and contracts (<code>trait</code>) separate, and combines them freely.
+      As an architect, you already prefer composition over inheritance. Rust makes it the only option.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>You can have many <code>impl</code> blocks for one type, even in different files of the same crate. You can also print any
+      <code>Debug</code> value in a nice layout with <code>{:#?}</code>, or quickly inspect a value with <code>dbg!(&amp;map.path_len())</code>.
+      <code>dbg!</code> prints the file, the line and the expression, and returns the value. Use it for debugging, and never commit it.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">In C# I would make Map a class with a constructor that validates its input. What is the idiomatic Rust way to stop invalid maps (for example, a path outside the map)? Explain the options. Do not write my code.</div>
+  </section>
+</main>
+</body>
+</html>

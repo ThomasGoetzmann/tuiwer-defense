@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meet the Toolchain</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="0.2" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 0: Setup and toolchain</div>
+  <h1>0.2 Meet the toolchain</h1>
+  <div class="meta"><span>≈ 25 min</span><span>Scratch project, not the game</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Create, build and run a Rust program with <code>cargo</code>.</li>
+      <li>Know what each file in a new project does.</li>
+      <li>Read your first compiler error, and use <code>rustc --explain</code>.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>.NET</th><th>Rust</th><th>Note</th></tr>
+      <tr><td><code>dotnet new console</code></td><td><code>cargo new hello</code></td><td>Also does <code>git init</code>.</td></tr>
+      <tr><td><code>dotnet new classlib</code></td><td><code>cargo new --lib name</code></td><td></td></tr>
+      <tr><td><code>dotnet build</code> / <code>run</code> / <code>test</code></td><td><code>cargo build</code> / <code>run</code> / <code>test</code></td><td>Same idea.</td></tr>
+      <tr><td><code>-c Release</code></td><td><code>--release</code></td><td>Debug is the default.</td></tr>
+      <tr><td><code>.csproj</code></td><td><code>Cargo.toml</code></td><td>TOML format, very short.</td></tr>
+      <tr><td><code>packages.lock.json</code></td><td><code>Cargo.lock</code></td><td>Exact versions of all dependencies.</td></tr>
+      <tr><td><code>bin/</code>, <code>obj/</code></td><td><code>target/</code></td><td>Never commit it.</td></tr>
+      <tr><td><code>static void Main()</code></td><td><code>fn main()</code></td><td>In <code>src/main.rs</code>.</td></tr>
+      <tr><td><code>dotnet add package X</code></td><td><code>cargo add x</code></td><td>Packages come from <a href="https://crates.io">crates.io</a>.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Hello, cargo</h2>
+    <ol class="steps">
+      <li>
+        <p>Create a scratch project outside the game repository:</p>
+<pre data-label="fish"><code class="language-bash">mkdir -p ~/sources/rust-scratch
+cd ~/sources/rust-scratch
+cargo new hello
+cd hello
+ls -a; ls src</code></pre>
+      </li>
+      <li>
+        <p>Open <code>Cargo.toml</code>. Read it. It has only a few lines:</p>
+<pre data-label="Cargo.toml"><code class="language-ini">[package]
+name = "hello"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]</code></pre>
+        <p>The <code>edition</code> line selects the language rules. 2024 is the latest.</p>
+      </li>
+      <li>
+        <p>Open <code>src/main.rs</code>, then run it:</p>
+<pre data-label="fish"><code class="language-bash">cargo run</code></pre>
+        <p>The first line of output shows <code>Compiling hello</code>. The second time, cargo does not compile again.</p>
+      </li>
+      <li>
+        <p>Change <code>main</code>. Use a variable inside the format string:</p>
+<pre data-label="src/main.rs"><code class="language-rust">fn main() {
+    let game = "Tuiwer Defense";
+    let waves = 10;
+    println!("Welcome to {game}! Survive {waves} waves.");
+    println!("Debug view: {:?}", (game, waves));
+}</code></pre>
+        <p>The <code>!</code> in <code>println!</code> means it is a <a href="../glossary.html#macro">macro</a>.
+          The compiler checks the format string at compile time. A wrong placeholder name is a compile error, not a runtime error.</p>
+      </li>
+      <li>
+        <p>Compare debug and release builds:</p>
+<pre data-label="fish"><code class="language-bash">cargo build
+cargo build --release
+ls -lh target/debug/hello target/release/hello
+./target/release/hello</code></pre>
+        <p>The result is one native executable. There is no runtime to install, and no JIT.</p>
+      </li>
+      <li>
+        <p>Try the fast feedback command. It checks types but does not build an executable:</p>
+<pre data-label="fish"><code class="language-bash">cargo check</code></pre>
+        <p>You will use <code>cargo check</code> (or an editor) many times per minute. It is much faster than <code>build</code>.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>What cargo does for you</h2>
+    <pre class="mermaid">
+flowchart LR
+    A["Cargo.toml<br/>+ Cargo.lock"] --> B["cargo resolves<br/>dependencies"]
+    B --> C["downloads crates<br/>from crates.io"]
+    C --> D["rustc compiles<br/>each crate"]
+    D --> E["target/debug/hello<br/>native binary"]
+    </pre>
+    <p>Each crate is compiled once and cached in <code>target/</code>.
+      Only changed crates are compiled again.</p>
+  </section>
+
+  <section class="block compile-error">
+    <span class="block-tag">Compiler error of the day</span>
+    <p>Add these two lines at the end of <code>main</code>, then run <code>cargo run</code>:</p>
+<pre data-label="src/main.rs"><code class="language-rust">    let lives = 20;
+    lives = lives - 1;</code></pre>
+    <p>Read the full error. Look for four things:</p>
+    <ol>
+      <li>The <strong>error code</strong>, for example <code>E0384</code>.</li>
+      <li>The <strong>arrows</strong> that point at your code.</li>
+      <li>The <strong>help</strong> line. It often contains the fix.</li>
+      <li>The <code>rustc --explain</code> suggestion.</li>
+    </ol>
+<pre data-label="fish"><code class="language-bash">rustc --explain E0384</code></pre>
+    <p>Do what the help line says. The program must compile again. You just met the first big rule:
+      <strong>variables are immutable by default</strong>. Lesson 1.1 explains it.</p>
+  </section>
+
+  <section class="block exercise">
+    <span class="block-tag">Exercise 0.2-A</span>
+    <p>Add a dependency and use it. Make the program print the welcome text in colour.</p>
+<pre data-label="fish"><code class="language-bash">cargo add owo-colors</code></pre>
+    <p>Find how to use the crate. Do not ask the AI for the code. Use these sources, in this order:</p>
+    <ol>
+      <li>The crate page on <a href="https://docs.rs/owo-colors">docs.rs</a>. Every crate has docs there.</li>
+      <li>The examples on that page.</li>
+    </ol>
+    <details class="hint"><summary>Hint 1: direction</summary>
+      <p>The crate adds methods to strings. You need to bring a trait into scope with <code>use</code>.</p></details>
+    <details class="hint"><summary>Hint 2: concept</summary>
+      <p>In Rust, a method from a trait is visible only when the trait is in scope. This is like C# extension methods: you need the <code>using</code> for the namespace. The docs.rs front page shows the <code>use</code> line.</p></details>
+    <details class="hint"><summary>Hint 3: almost code</summary>
+      <p><code>use owo_colors::OwoColorize;</code> then call a colour method like <code>.green()</code> on the text inside <code>println!</code>.
+        Note: the crate name has a <code>-</code>, but in code it is <code>_</code>.</p></details>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">cargo run</code></pre>
+    <p>The welcome text appears in colour. Then look at <code>Cargo.lock</code>: it lists the exact version of <code>owo-colors</code>.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Rust compiler errors are famous for being helpful. This is a deliberate project goal: the compiler team treats a
+      confusing error message as a bug. When you are stuck, read the whole message first. In Rust, the compiler is your
+      first teacher.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">What is the difference between Cargo.lock in an application and in a library? Should I commit it? Answer in five sentences.</div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install the Tools</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script src="../assets/vendor/highlight.min.js"></script>
+  <script src="../assets/vendor/mermaid.min.js"></script>
+  <script src="../assets/course.js"></script>
+</head>
+<body data-lesson="0.1" data-root="../">
+<main>
+  <div class="crumbs"><a href="../index.html">Course map</a> / Chapter 0: Setup and toolchain</div>
+  <h1>0.1 Install the tools</h1>
+  <div class="meta"><span>≈ 20 min</span><span>No code yet</span></div>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <p>At the end of this lesson:</p>
+    <ul>
+      <li>The Rust toolchain is complete and up to date.</li>
+      <li>RustRover is installed and finds the toolchain.</li>
+      <li>Your Neovim knows Rust (optional, see Appendix A).</li>
+      <li>You can open the Rust book offline.</li>
+    </ul>
+  </section>
+
+  <section class="block compare">
+    <span class="block-tag">C# → Rust</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>In .NET you use…</th><th>In Rust you use…</th></tr>
+      <tr><td>The .NET SDK installer, <code>global.json</code></td><td><code>rustup</code></td></tr>
+      <tr><td>Visual Studio, Rider</td><td>RustRover (same company as Rider), or any editor with rust-analyzer</td></tr>
+      <tr><td>JetBrains Toolbox</td><td>JetBrains Toolbox (the same tool)</td></tr>
+      <tr><td>Microsoft Learn docs</td><td><code>rustup doc</code>: the full docs, offline</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>One installer, many tools</h2>
+    <p><code>rustup</code> installs a <strong>toolchain</strong>: one version of the compiler and all its tools.
+      All tools in a toolchain have the same version. This prevents mismatch problems.</p>
+    <figure>
+      <svg viewBox="0 0 720 230" role="img" aria-label="rustup installs a toolchain with cargo, rustc, clippy, rustfmt and rust-analyzer">
+        <style>
+          .box { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.5; }
+          .hot { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+          .t { fill: var(--text); font: 600 15px system-ui, sans-serif; }
+          .s { fill: var(--muted); font: 12px system-ui, sans-serif; }
+          .ln { stroke: var(--accent); stroke-width: 2; fill: none; }
+        </style>
+        <rect class="hot" x="20" y="85" width="140" height="60" rx="8"/>
+        <text class="t" x="90" y="112" text-anchor="middle">rustup</text>
+        <text class="s" x="90" y="131" text-anchor="middle">installs, updates</text>
+        <path class="ln" d="M160 115 H210"/>
+        <rect class="box" x="210" y="20" width="490" height="190" rx="10"/>
+        <text class="s" x="225" y="42">~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu</text>
+        <g>
+          <rect class="hot" x="230" y="60" width="140" height="56" rx="6"/>
+          <text class="t" x="300" y="85" text-anchor="middle">cargo</text>
+          <text class="s" x="300" y="103" text-anchor="middle">≈ dotnet CLI</text>
+          <rect class="box" x="385" y="60" width="140" height="56" rx="6"/>
+          <text class="t" x="455" y="85" text-anchor="middle">rustc</text>
+          <text class="s" x="455" y="103" text-anchor="middle">≈ csc / Roslyn</text>
+          <rect class="box" x="540" y="60" width="140" height="56" rx="6"/>
+          <text class="t" x="610" y="85" text-anchor="middle">clippy</text>
+          <text class="s" x="610" y="103" text-anchor="middle">≈ analyzers</text>
+          <rect class="box" x="230" y="134" width="140" height="56" rx="6"/>
+          <text class="t" x="300" y="159" text-anchor="middle">rustfmt</text>
+          <text class="s" x="300" y="177" text-anchor="middle">≈ dotnet format</text>
+          <rect class="box" x="385" y="134" width="140" height="56" rx="6"/>
+          <text class="t" x="455" y="159" text-anchor="middle">rust-analyzer</text>
+          <text class="s" x="455" y="177" text-anchor="middle">≈ Roslyn LSP</text>
+          <rect class="box" x="540" y="134" width="140" height="56" rx="6"/>
+          <text class="t" x="610" y="159" text-anchor="middle">rust-src, docs</text>
+          <text class="s" x="610" y="177" text-anchor="middle">std source + docs</text>
+        </g>
+      </svg>
+      <figcaption>You type <code>cargo</code> every day. You type <code>rustup</code> about once a month.</figcaption>
+    </figure>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Install and check</h2>
+    <ol class="steps">
+      <li>
+        <p>Update your toolchain. Then add the components that editors need.</p>
+<pre data-label="fish"><code class="language-bash">rustup update stable
+rustup component add rust-analyzer rust-src clippy rustfmt
+rustup component list --installed</code></pre>
+        <p>Make sure the list contains <code>rust-analyzer</code> and <code>rust-src</code>.
+          (Your chezmoi script does the same on a new machine.)</p>
+      </li>
+      <li>
+        <p>Look at what you have:</p>
+<pre data-label="fish"><code class="language-bash">rustup show
+which cargo rustc rust-analyzer</code></pre>
+        <p>All three paths must be in <code>~/.cargo/bin</code>. These files are small <em>proxies</em>.
+          They start the correct tool from the active toolchain.</p>
+      </li>
+      <li>
+        <p>Install JetBrains Toolbox with Homebrew. Then start it once.</p>
+<pre data-label="fish"><code class="language-bash">brew install --cask jetbrains-toolbox
+jetbrains-toolbox &amp;</code></pre>
+        <p>In Toolbox, find <strong>RustRover</strong> and click <strong>Install</strong>.
+          RustRover is free for non-commercial use. Choose the non-commercial licence on the first start.</p>
+      </li>
+      <li>
+        <p>Start RustRover. Open <strong>Settings → Languages &amp; Frameworks → Rust</strong>.
+          Make sure the <em>Toolchain location</em> is <code>~/.cargo/bin</code> and the
+          <em>Standard library</em> field is filled. If it is empty, click <strong>Download via rustup</strong>.</p>
+      </li>
+      <li>
+        <p>Optional: set up Neovim now. Follow <a href="../appendix-a-neovim.html">Appendix A</a>.
+          The changes are already in your dotfiles. You only apply and test them.</p>
+      </li>
+      <li>
+        <p>Open the Rust book and the standard library docs, offline:</p>
+<pre data-label="fish"><code class="language-bash">rustup doc --book
+rustup doc --std</code></pre>
+        <p>Bookmark both pages. Chapters 1 to 3 of the book follow the same order as this course.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="block check">
+    <span class="block-tag">Check</span>
+<pre data-label="fish"><code class="language-bash">rustc --version; and cargo --version; and rust-analyzer --version; and cargo clippy --version</code></pre>
+    <p>All four commands print a version. RustRover shows no warning about the toolchain.</p>
+  </section>
+
+  <section class="block why">
+    <span class="block-tag">Why Rust does this</span>
+    <p>Rust releases a new stable version every six weeks. A new version never breaks old code that compiles.
+      Large changes come only in <strong>editions</strong> (2015, 2018, 2021, 2024), and each crate chooses its edition.
+      So updates are cheap: you run <code>rustup update</code> and continue.
+      This is why the Rust community does not fear updates, unlike many .NET major-version migrations.</p>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Deep dive</span>
+    <p>You can pin a toolchain for one project with a <code>rust-toolchain.toml</code> file, like
+      <code>global.json</code>. You can also install the <em>nightly</em> toolchain for experimental features:
+      <code>rustup toolchain install nightly</code>. This course uses <strong>stable</strong> only.</p>
+  </section>
+
+  <section class="block ask-ai">
+    <span class="block-tag">Ask the AI</span>
+    <div class="prompt">RustRover says “No standard library found”. Explain what the standard library source is used for, and give me the steps to check it. Do not run commands for me.</div>
+  </section>
+</main>
+</body>
+</html>

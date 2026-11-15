@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neovim for Rust</title>
+  <link rel="stylesheet" href="assets/course.css">
+  <script src="assets/vendor/highlight.min.js"></script>
+  <script src="assets/vendor/mermaid.min.js"></script>
+  <script src="assets/course.js"></script>
+</head>
+<body>
+<main>
+  <div class="crumbs"><a href="index.html">Course map</a> / Appendix A</div>
+  <h1>Appendix A: Neovim for Rust</h1>
+  <p class="subtitle">What each line of the Rust setup does, why it is there, and what you see without it.
+    The setup uses your existing config in <code>~/sources/dotfiles-v2</code>. It adds no new plugins.</p>
+
+  <section class="block goal">
+    <span class="block-tag">Goal</span>
+    <ul>
+      <li>Completion, errors, hover docs and refactors from <strong>rust-analyzer</strong>.</li>
+      <li>Format on save with <strong>rustfmt</strong>.</li>
+      <li>Syntax highlighting with <strong>treesitter</strong>.</li>
+      <li>A debugger with <strong>codelldb</strong>.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Concept</span>
+    <h2>Who does what</h2>
+    <pre class="mermaid">
+flowchart LR
+    nvim["Neovim 0.12"]
+    subgraph rustup["from rustup (~/.cargo/bin)"]
+      ra["rust-analyzer"]
+      fmt["rustfmt"]
+    end
+    subgraph mason["from mason"]
+      lldb["codelldb"]
+    end
+    ts["treesitter parsers<br/>rust, toml"]
+    nvim -- "vim.lsp (built in)" --> ra
+    nvim -- "conform.nvim" --> fmt
+    nvim -- "nvim-dap" --> lldb
+    nvim -- "nvim-treesitter" --> ts
+    </pre>
+    <p>The important decision: <strong>rust-analyzer and rustfmt come from rustup, not from mason.</strong>
+      rustup installs them with your compiler. They always have the same version as <code>rustc</code>.
+      A mason copy can be older or newer than your compiler, and that gives strange errors in macros and new syntax.</p>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">The five changes</span>
+    <h2>1. The chezmoi script installs Rust with rustup</h2>
+    <p>File: <code>.chezmoiscripts/run_onchange_after_30-serie.sh.tmpl</code></p>
+<pre data-label="bash"><code class="language-bash"># Rust toolchain: always through rustup (never brew's standalone rust).
+# --no-modify-path: fish config already adds ~/.cargo/bin.
+if ! command -v rustup &gt;/dev/null; then
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+fi
+export PATH="$HOME/.cargo/bin:$PATH"
+rustup default stable
+rustup component add rust-analyzer rust-src clippy rustfmt</code></pre>
+    <ul>
+      <li><strong>Why:</strong> before, the script ran <code>brew install rust</code> on a new machine. Brew's Rust has no rustup, so you cannot add components or switch versions.</li>
+      <li><code>--no-modify-path</code>: the installer does not edit shell files. Your fish config already has <code>fish_add_path -p ~/.cargo/bin</code>.</li>
+      <li><code>export PATH=…</code>: the script itself runs in bash, so it needs the path for the next lines.</li>
+      <li><code>rust-src</code>: the source code of the standard library. rust-analyzer needs it for completion and go-to-definition into <code>std</code>.</li>
+      <li>On this machine, rustup is already installed. The script only makes sure the components are present.</li>
+    </ul>
+
+    <h2>2. Start rust-analyzer</h2>
+    <p>File: <code>lua/tg/plugins/lsp/lspconfig.lua</code>, at the end of <code>config</code></p>
+<pre data-label="lua"><code class="language-lua">-- rust-analyzer comes from rustup (matches the compiler), not mason
+vim.lsp.enable("rust_analyzer")</code></pre>
+    <ul>
+      <li><strong>What:</strong> Neovim 0.12 has a built-in LSP client. <code>vim.lsp.enable</code> starts a server when you open a matching file.
+        The server settings (command, file types, root markers) come from <code>nvim-lspconfig</code>, which you already have.</li>
+      <li><strong>Why it is needed:</strong> your other servers start automatically because <code>mason-lspconfig</code> enables everything that mason installed.
+        rust-analyzer does not come from mason, so you enable it yourself.</li>
+      <li><strong>Without it:</strong> no completion, no errors in the editor, and <kbd>K</kbd> shows nothing.</li>
+      <li>Your existing <code>LspAttach</code> keymaps work for Rust too: <kbd>gd</kbd>, <kbd>gR</kbd>, <kbd>K</kbd>, <kbd>&lt;leader&gt;;</kbd>, <kbd>&lt;leader&gt;rn</kbd>.</li>
+    </ul>
+    <p class="warning">Never install rust-analyzer in <code>:Mason</code>. mason-lspconfig would then start a <strong>second</strong> copy, and you would see every error twice.</p>
+
+    <h2>3. Format on save</h2>
+    <p>File: <code>lua/tg/plugins/formatting.lua</code></p>
+<pre data-label="lua"><code class="language-lua">rust = { "rustfmt" },</code></pre>
+    <ul>
+      <li><strong>What:</strong> conform runs <code>rustfmt</code> on save. Your config already has <code>format_on_save</code>.</li>
+      <li><strong>Edition:</strong> conform reads the edition from <code>Cargo.toml</code>. It understands <code>edition.workspace = true</code> and finds <code>2024</code> in the workspace root.</li>
+      <li><strong>Without it:</strong> the code is still formatted, because your config uses <code>lsp_format = "fallback"</code> and rust-analyzer can format. The explicit line makes the choice visible and does not depend on the LSP being ready.</li>
+    </ul>
+
+    <h2>4. Syntax highlighting</h2>
+    <p>File: <code>lua/tg/plugins/treesitter.lua</code></p>
+<pre data-label="lua"><code class="language-lua">"vimdoc", "c", "nu", "rust", "toml",</code></pre>
+    <ul>
+      <li><code>rust</code>: highlighting, indentation and text objects for <code>.rs</code> files.</li>
+      <li><code>toml</code>: for <code>Cargo.toml</code>.</li>
+      <li>rust-analyzer also sends <em>semantic tokens</em> (for example, it colours mutable variables differently). Treesitter gives the fast base colours. Both work together.</li>
+    </ul>
+
+    <h2>5. The debugger</h2>
+    <p>File: <code>lua/tg/plugins/dap.lua</code></p>
+<pre data-label="lua"><code class="language-lua">ensure_installed = { "netcoredbg", "codelldb" },</code></pre>
+    <ul>
+      <li><strong>What:</strong> mason installs <code>codelldb</code>, a debug adapter for LLDB. It works for Rust, C and C++.</li>
+      <li><strong>Why no more config:</strong> your config has <code>handlers = {}</code>. mason-nvim-dap then creates default launch configurations, like it does for <code>netcoredbg</code>.</li>
+      <li>The default configuration asks for the <em>path to executable</em>. Type <code>target/debug/tuiwer-tui</code>.</li>
+    </ul>
+  </section>
+
+  <section class="block handson">
+    <span class="block-tag">Hands-on</span>
+    <h2>Apply and test</h2>
+    <ol class="steps">
+      <li>
+        <p>Look at what chezmoi will change, then apply:</p>
+<pre data-label="fish"><code class="language-bash">chezmoi diff
+chezmoi apply</code></pre>
+        <p>The serie script runs again because its content changed. This is normal.</p>
+      </li>
+      <li>
+        <p>Start Neovim. lazy.nvim installs the parsers, and mason installs codelldb. Wait until both are done (<code>:Lazy</code>, <code>:Mason</code>).</p>
+      </li>
+      <li>
+        <p>Open a Rust file in the game repository. Check the LSP:</p>
+<pre data-label="neovim"><code class="language-plaintext">:checkhealth vim.lsp</code></pre>
+        <p>You must see <code>rust_analyzer</code> attached, with the command from <code>~/.cargo/bin</code>.
+          The first start indexes the standard library. This takes some seconds.</p>
+      </li>
+      <li>
+        <p>Test the features:</p>
+        <ul>
+          <li>Hover a type with <kbd>K</kbd>.</li>
+          <li>Write <code>let x: u32 = "a";</code> and see the error inline. Delete it.</li>
+          <li>Break the indentation, then save. The file is formatted.</li>
+          <li>On a function name, use <kbd>&lt;leader&gt;rn</kbd> to rename it everywhere.</li>
+        </ul>
+      </li>
+      <li>
+        <p>Test the debugger:</p>
+<pre data-label="fish"><code class="language-bash">cargo build</code></pre>
+        <p>Set a breakpoint in <code>main</code> with <kbd>&lt;leader&gt;db</kbd>. Start with <kbd>&lt;leader&gt;dc</kbd>, choose <em>LLDB: Launch</em>,
+          and enter <code>target/debug/tuiwer-tui</code>. Use <kbd>&lt;leader&gt;du</kbd> for the DAP UI.</p>
+        <p class="note">To debug a unit test, run <code>cargo test --workspace --no-run</code>. Cargo prints the path of each test executable in
+          <code>target/debug/deps/</code>. Use that path instead.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="block deepdive">
+    <span class="block-tag">Optional extras</span>
+    <h2>When you want more</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Plugin</th><th>What it adds</th><th>When it is worth it</th></tr>
+      <tr><td><a href="https://github.com/mrcjkb/rustaceanvim">rustaceanvim</a></td>
+        <td>Replaces the <code>vim.lsp.enable</code> line. Adds runnables (run one test under the cursor), macro expansion, “explain error”, and debug configs that build for you.</td>
+        <td>When you run single tests often from the editor. If you install it, remove the <code>vim.lsp.enable("rust_analyzer")</code> line: rustaceanvim starts the server itself.</td></tr>
+      <tr><td><a href="https://github.com/saecki/crates.nvim">crates.nvim</a></td>
+        <td>Shows the latest version of each dependency in <code>Cargo.toml</code>, and updates them.</td>
+        <td>From chapter 7, when you have real dependencies.</td></tr>
+      <tr><td>bacon in a pane</td>
+        <td>Not a plugin. Run <code>bacon</code> in a Herdr pane next to Neovim.</td>
+        <td>Always. It is the easiest setup.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <span class="block-tag" style="background:var(--surface-2)">Troubleshooting</span>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Problem</th><th>Cause and fix</th></tr>
+      <tr><td><code>rust_analyzer</code> is not attached</td><td><code>which rust-analyzer</code> must print <code>~/.cargo/bin/rust-analyzer</code>. If not: <code>rustup component add rust-analyzer</code>.</td></tr>
+      <tr><td>“can't load standard library”</td><td><code>rustup component add rust-src</code>, then <kbd>&lt;leader&gt;rs</kbd> to restart the LSP.</td></tr>
+      <tr><td>Every error appears twice</td><td>rust-analyzer is also installed in mason. Remove it: <code>:MasonUninstall rust-analyzer</code>.</td></tr>
+      <tr><td>Errors are old or wrong</td><td>rust-analyzer runs <code>cargo check</code> on save. Look at the progress in the status line. Restart with <kbd>&lt;leader&gt;rs</kbd>.</td></tr>
+    </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>
