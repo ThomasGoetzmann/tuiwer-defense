@@ -1,4 +1,4 @@
-use tuiwer_domain::*;
+use tuiwer_domain::game_title;
 
 fn main() {
     println!("#############");
