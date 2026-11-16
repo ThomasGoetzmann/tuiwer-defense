@@ -1,5 +1,7 @@
 # Tuiwer Defense
 
+![CI](https://github.com/ThomasGoetzmann/tuiwer-defense/actions/workflows/ci.yml/badge.svg)
+
 A turn-based tower defense game for the terminal, written in Rust. I'm building it to learn Rust.
 
 - **The game:** in the build phase, a timer counts down while you place towers. Press Start to begin the next wave early. Enemies follow a fixed path, and your towers shoot them.
