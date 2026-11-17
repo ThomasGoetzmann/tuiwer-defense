@@ -20,8 +20,12 @@
   <h2>Your progress</h2>
   <div class="map-wrap" id="progress-map"></div>
   <p class="progress-line" id="progress-line"></p>
-  <p class="note">Progress is stored in this browser only. Each lesson page has a
-    <strong>Mark lesson as done</strong> button at the bottom. Git is your real record of progress.</p>
+  <p><button id="refresh-progress" class="done-toggle" type="button">Refresh progress</button>
+    <span class="progress-line" id="refresh-status"></span></p>
+  <p class="note">Each lesson page has a <strong>Mark lesson as done</strong> button at the bottom.
+    The browser keeps your progress. If you run <code>python3 course/serve.py</code> and open
+    <code>http://localhost:8000</code>, the progress also goes to <code>course/.progress.json</code>.
+    Git ignores that file.</p>
 
   <h2>How this course works</h2>
   <ul>

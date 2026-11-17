@@ -5,7 +5,15 @@
 A turn-based tower defense game for the terminal, written in Rust. I'm building it to learn Rust.
 
 - **The game:** in the build phase, a timer counts down while you place towers. Press Start to begin the next wave early. Enemies follow a fixed path, and your towers shoot them.
-- **The course:** [`course/index.html`](course/index.html) is a step-by-step Rust course for C# developers, built around this game. Open it in a browser.
+- **The course:** [`course/index.html`](course/index.html) is a step-by-step Rust course for C# developers, built around this game.
+
+## Course
+
+```sh
+python3 course/serve.py
+```
+
+Open <http://localhost:8000>. Your progress is saved in `course/.progress.json`. Git ignores this file.
 
 ## Run
 

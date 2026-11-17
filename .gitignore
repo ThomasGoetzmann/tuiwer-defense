@@ -1,1 +1,3 @@
 /target
+/course/.progress.json
+__pycache__/

@@ -249,11 +249,48 @@ function loadDone() {
   }
 }
 
-function saveDone(done) {
+function storeLocal(done) {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify([...done]));
   } catch {
     /* storage blocked: progress lives only for this page view */
+  }
+}
+
+// With `python3 course/serve.py`, progress also lives in course/.progress.json (git-ignored).
+// Opened as a plain file, the fetch calls fail and localStorage is all there is.
+function apiUrl() {
+  return rootPrefix() + "api/progress";
+}
+
+function pushDone(done) {
+  fetch(apiUrl(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done: [...done] }),
+  }).catch(() => {});
+}
+
+function saveDone(done) {
+  storeLocal(done);
+  pushDone(done);
+}
+
+// Returns the saved lessons as a Set, or null when the server is not running.
+async function syncDone() {
+  try {
+    const res = await fetch(apiUrl(), { cache: "no-store" });
+    if (!res.ok) return null;
+    const remote = new Set((await res.json()).done);
+    const local = loadDone();
+    if (remote.size === 0 && local.size > 0) {
+      pushDone(local); // first run: seed the file from this browser
+      return local;
+    }
+    storeLocal(remote);
+    return remote;
+  } catch {
+    return null;
   }
 }
 
@@ -323,6 +360,12 @@ function setupLesson() {
     paint();
   });
   paint();
+  syncDone().then((saved) => {
+    if (!saved) return;
+    done.clear();
+    saved.forEach((l) => done.add(l));
+    paint();
+  });
   bar.appendChild(btn);
   main.appendChild(bar);
 
@@ -350,8 +393,22 @@ function setupIndex() {
   const mapEl = document.getElementById("progress-map");
   const listEl = document.getElementById("chapter-list");
   if (!mapEl || !listEl) return;
-  const done = loadDone();
+  renderIndex(loadDone(), mapEl, listEl);
 
+  const btn = document.getElementById("refresh-progress");
+  const status = document.getElementById("refresh-status");
+  const refresh = async () => {
+    const saved = await syncDone();
+    if (saved) renderIndex(saved, mapEl, listEl);
+    if (btn) status.textContent = saved
+      ? "Progress loaded from course/.progress.json."
+      : "Server not running. Start it with: python3 course/serve.py";
+  };
+  syncDone().then((saved) => saved && renderIndex(saved, mapEl, listEl));
+  btn?.addEventListener("click", refresh);
+}
+
+function renderIndex(done, mapEl, listEl) {
   // Snake path: 5 nodes per row, alternate direction, like a TD enemy path.
   const perRow = 5, dx = 180, dy = 110, x0 = 110, y0 = 70;
   const pos = CHAPTERS.map((c, i) => {
