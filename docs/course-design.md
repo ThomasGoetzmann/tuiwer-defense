@@ -25,7 +25,7 @@ The decisions behind the Tuiwer Defense course, settled in a grilling session (2
 - Lesson = one page, 15–25 min. Chapter = 1–2 h. Lessons are self-contained so the learner can split or merge them by difficulty.
 - Diagrams: Mermaid (vendored, offline) for flows; hand-written inline SVG for memory/ownership concepts. SVGs use the CSS colour tokens so dark mode works.
 - Lesson blocks: Goal, C# → Rust, Concept, Hands-on, Exercise + hints, Check — plus where they fit: Compiler error of the day, Boss fight, Show-off, Why Rust does this, Deep dive, Ask the AI. Installing and running tools counts as hands-on.
-- Progress map on `index.html`: chapters drawn as a tower-defense path; a finished lesson is a "defeated wave" (localStorage).
+- Progress map on `index.html`: chapters drawn as a tower-defense path; a finished lesson is a "defeated wave" (localStorage, plus `course/.progress.json` when served with `python3 course/serve.py`).
 - Prose: ASD-STE100 plain English (rules in `CLAUDE.md`).
 - Chapters are written **just in time**: the learner asks "generate chapter N" after finishing N−1, so each chapter builds on the learner's real code.
 
@@ -33,6 +33,7 @@ The decisions behind the Tuiwer Defense course, settled in a grilling session (2
 
 - Turn-based tower defense. **Build phase**: a timer counts down while the player places towers; a Start key skips to the wave. **Wave phase**: the wave plays out automatically. Then Build again, or Won/Lost.
 - Fixed path on a grid. Open-grid maps with A\* pathfinding come late (chapter 16).
+- Damage rule: armor reduces damage, but a hit with damage > 0 always deals at least 1. A hit with 0 damage stays 0 (slow towers hit without hurting).
 - Keyboard first; mouse support later.
 - First playable version (milestone, chapter 12): 1 map, 3 tower types (fast/weak, slow/strong, area), 3 enemy types (normal, fast, armored), gold, lives, 10 waves, win/lose screens.
 - Later: upgrade/sell, levels from RON files, save/load, mouse, open grid.

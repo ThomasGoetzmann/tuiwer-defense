@@ -15,6 +15,8 @@ python3 course/serve.py
 
 Open <http://localhost:8000>. Your progress is saved in `course/.progress.json`. Git ignores this file.
 
+Python 3 is optional. Without it, open `course/index.html` in a browser. Then the browser keeps your progress.
+
 ## Run
 
 ```sh

@@ -114,7 +114,7 @@ fn explore_unsigned_edges() {
     <p>Add two constants and one game rule to the domain crate:</p>
     <ul>
       <li><code>STARTING_GOLD</code> is 100 and <code>STARTING_LIVES</code> is 20. Both are public <code>u32</code> constants.</li>
-      <li><code>damage_after_armor(damage, armor)</code> takes two <code>u32</code> values. Armor reduces the damage. A hit always does at least 1 damage.</li>
+      <li><code>damage_after_armor(damage, armor)</code> takes two <code>u32</code> values. Armor reduces the damage. A hit that does damage always does at least 1 damage. A hit with 0 damage stays at 0: a slowing tower deals no damage but still hits.</li>
     </ul>
     <p>Write the tests first. Make them fail, then pass:</p>
 <pre data-label="tests to add"><code class="language-rust">#[test]
@@ -128,9 +128,14 @@ fn zero_armor_keeps_damage() {
 }
 
 #[test]
-fn a_hit_always_does_at_least_one_damage() {
+fn a_damaging_hit_always_does_at_least_one_damage() {
     assert_eq!(damage_after_armor(2, 5), 1);
-    assert_eq!(damage_after_armor(0, 0), 1);
+}
+
+#[test]
+fn a_hit_with_zero_damage_stays_zero() {
+    assert_eq!(damage_after_armor(0, 0), 0);
+    assert_eq!(damage_after_armor(0, 5), 0);
 }
 
 #[test]
@@ -141,12 +146,13 @@ fn starting_values() {
     <p>Use this signature. The body is yours:</p>
 <pre data-label="signature"><code class="language-rust">pub fn damage_after_armor(damage: u32, armor: u32) -&gt; u32</code></pre>
     <details class="hint"><summary>Hint 1: direction</summary>
-      <p>What happens when <code>armor</code> is larger than <code>damage</code>? Your explore test gave the answer.</p></details>
+      <p>What happens when <code>armor</code> is larger than <code>damage</code>? Your explore test gave the answer.
+        Then think about the zero-damage case: one expression may not be enough.</p></details>
     <details class="hint"><summary>Hint 2: concept</summary>
       <p>Integer types have methods. Look at <code>u32</code> in <code>rustup doc --std</code>. You need one method that stops at zero,
         and one method that gives the larger of two values. Methods can be chained.</p></details>
     <details class="hint"><summary>Hint 3: almost code</summary>
-      <p><code>saturating_sub</code> and <code>max</code>. The body is one expression, without <code>return</code> and without <code>;</code>.</p></details>
+      <p><code>saturating_sub</code> and <code>max</code>. Handle zero damage first with an early <code>return</code>. Then the rest is one expression, without <code>return</code> and without <code>;</code>.</p></details>
   </section>
 
   <section class="block check">
